@@ -32,7 +32,7 @@ class Order:
         if self.order_type == 'ask':
             return self.price < other.price
 
-    def __le__(self, other):
+    def __le__(self, other) -> bool:
         if self.order_type != other.order_type:
             if self.order_type == 'bid':
                 return self.price >= other.price
@@ -44,7 +44,7 @@ class Order:
         if self.order_type == 'ask':
             return self.price <= other.price
 
-    def __gt__(self, other):
+    def __gt__(self, other) -> bool:
         if self.order_type != other.order_type:
             if self.order_type == 'bid':
                 return self.price < other.price
@@ -56,7 +56,7 @@ class Order:
         if self.order_type == 'ask':
             return self.price > other.price
 
-    def __ge__(self, other):
+    def __ge__(self, other) -> bool:
         if self.order_type != other.order_type:
             if self.order_type == 'bid':
                 return self.price <= other.price
@@ -68,7 +68,8 @@ class Order:
         if self.order_type == 'ask':
             return self.price >= other.price
 
-    def __str__(self):
+    # todo reflect price and quantity as well
+    def __str__(self) -> str:
         return f'Order{self.order_id} {self.order_type}'
 
     def to_dict(self) -> dict:
@@ -265,19 +266,27 @@ class ExchangeAgent:
         self.order_book['bid'] = OrderList.from_list([order for order in self.order_book['bid'] if order.qty > 0])
         self.order_book['ask'] = OrderList.from_list([order for order in self.order_book['ask'] if order.qty > 0])
 
-    def spread(self) -> dict:
+    def spread(self) -> dict or None:
         """
         :return: {'bid': float, 'ask': float}
         """
-        if not self.order_book['bid'] or not self.order_book['ask']:
-            return {'bid': None, 'ask': None}
-        return {'bid': self.order_book['bid'].first.price, 'ask': self.order_book['ask'].first.price}
+        if self.order_book['bid'] and self.order_book['ask']:
+            return {'bid': self.order_book['bid'].first.price, 'ask': self.order_book['ask'].first.price}
+        return None
 
-    def spread_volume(self) -> dict:
+    def spread_volume(self) -> dict or None:
         """
         :return: {'bid': float, 'ask': float}
         """
-        return {'bid': self.order_book['bid'].first.qty, 'ask': self.order_book['ask'].first.qty}
+        if self.order_book['bid'] and self.order_book['ask']:
+            return {'bid': self.order_book['bid'].first.qty, 'ask': self.order_book['ask'].first.qty}
+        return None
+
+    def get_price(self) -> float or None:
+        spread = self.spread()
+        if spread['bid'] and spread['ask']:
+            return (spread['bid'] + spread['ask']) / 2
+        return None
 
     def limit_order(self, order: Order):
         """
