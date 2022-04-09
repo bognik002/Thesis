@@ -190,6 +190,10 @@ class OrderList:
         if order.order_type != self.order_type:
             raise ValueError(f'Wrong order type! OrderList: {self.order_type}, Order: {order.order_type}')
 
+        # If empty
+        if self.first is None:
+            self.append(order)
+
         # Insert order in the beginning
         if order <= self.first:
             order.right = self.first

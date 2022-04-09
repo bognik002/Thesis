@@ -1,4 +1,5 @@
 from AgentBasedModel.utils import Order, OrderList
+import random
 
 
 class ExchangeAgent:
@@ -6,9 +7,31 @@ class ExchangeAgent:
     ExchangeAgent implements automatic orders handling within the order book. It supports limit orders,
     market orders, cancel orders, returns current spread prices and volumes.
     """
-    def __init__(self, spread_init, depth=0, price_std=50, quantity_mean=1, quantity_std=1):
+    id = 0
+
+    def __init__(self, price: float or int = 500, std: float or int = 10, volume: int = 1000):
+        """
+        Initialization parameters
+        :param price: stock initial price
+        :param std: standard deviation of order prices in book
+        :param volume: number of orders in book
+        """
+        self.name = f'ExchangeAgent{self.id}'
+        ExchangeAgent.id += 1
+
         self.order_book = {'bid': OrderList('bid'), 'ask': OrderList('ask')}
-        self.name = 'market'
+        self._fill_book(price, std, volume)
+
+    def _fill_book(self, price, std, volume):
+        prices = [round(random.normalvariate(price, std), 1) for i in range(volume)]  # orders prices
+        quantities = [random.randint(1, 10) for i in range(volume)]
+        for (p, q) in zip(sorted(prices), quantities):
+            if p > price:
+                order = Order(p, q, 'ask', self)
+                self.order_book['ask'].append(order)
+            else:
+                order = Order(p, q, 'bid', self)
+                self.order_book['bid'].push(order)
 
     def _clear_book(self):
         """
@@ -37,7 +60,7 @@ class ExchangeAgent:
             return {'bid': self.order_book['bid'].first.qty, 'ask': self.order_book['ask'].first.qty}
         return None
 
-    def get_price(self) -> float or None:
+    def price(self) -> float or None:
         spread = self.spread()
         if spread['bid'] and spread['ask']:
             return (spread['bid'] + spread['ask']) / 2
