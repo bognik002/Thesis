@@ -1,5 +1,5 @@
 from AgentBasedModel.exchange import ExchangeAgent
-from AgentBasedModel.utils import Order, OrderList
+from AgentBasedModel.utils import Order
 import random
 
 
@@ -12,10 +12,13 @@ class Trader:
 
         self.cash = cash
         self.assets = assets
-        self.equity = cash + assets * (market.price() if market.price() is not None else 0)
 
     def __str__(self) -> str:
         return self.name
+
+    def equity(self):
+        price = self.market.price() if self.market.price() is not None else 0
+        return self.cash + self.assets * price
 
     def _buy_limit(self, quantity, price):
         order = Order(price, quantity, 'bid', self)
@@ -100,13 +103,14 @@ class NoiseTrader(Trader):
         if order_exec == 'limit':
             return random.randint(a, b)
 
-    def call(self, spread: dict):
+    def call(self):
         """
         Function to call agent action
 
         :param spread: {'bid': float, 'ask' float} - spread stamp with lag
         :return: void
         """
+        spread = self.market.spread()
         if not spread['bid'] or not spread['ask']:
             return
 

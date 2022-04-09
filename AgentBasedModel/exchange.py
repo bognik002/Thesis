@@ -27,10 +27,10 @@ class ExchangeAgent:
         quantities = [random.randint(1, 10) for i in range(volume)]
         for (p, q) in zip(sorted(prices), quantities):
             if p > price:
-                order = Order(p, q, 'ask', self)
+                order = Order(p, q, 'ask', None)
                 self.order_book['ask'].append(order)
             else:
-                order = Order(p, q, 'bid', self)
+                order = Order(p, q, 'bid', None)
                 self.order_book['bid'].push(order)
 
     def _clear_book(self):

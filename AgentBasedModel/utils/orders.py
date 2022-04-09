@@ -227,10 +227,30 @@ class OrderList:
             if val > order:
                 break
 
-            tmp = min(order.qty, val.qty)  # Quantity traded currently
-            val.qty -= tmp
-            order.qty -= tmp
+            # Solve orders
+            tmp_qty = min(order.qty, val.qty)  # Quantity traded currently
+            tmp_price = val.price  # Price traded
+            val.qty -= tmp_qty
+            order.qty -= tmp_qty
 
+            # Solve cash and assets
+            if order.order_type == 'bid':
+                if order.trader is not None:
+                    order.trader.cash -= tmp_price * tmp_qty
+                    order.trader.assets += tmp_qty
+                if val.trader is not None:
+                    val.trader.cash += tmp_price * tmp_qty
+                    val.trader.assets -= tmp_qty
+
+            if order.order_type == 'ask':
+                if order.trader is not None:
+                    order.trader.cash += tmp_price * tmp_qty
+                    order.trader.assets -= tmp_qty
+                if val.trader is not None:
+                    val.trader.cash -= tmp_price * tmp_qty
+                    val.trader.assets += tmp_qty
+
+            # Clear remaining
             if val.qty == 0:
                 self.remove(val)
 
