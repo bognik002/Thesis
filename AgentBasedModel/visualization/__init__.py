@@ -1,1 +1,1 @@
-from AgentBasedModel.visualization.simulator_graphs import *
+from AgentBasedModel.visualization.graphs import *

@@ -3,7 +3,7 @@ def mean(x: list):
 
 
 def quantile(x: list, q=.5):
-    return sorted(x)[round(len(x) * q)]
+    return sorted(x)[round(len(x) * q) - 1]
 
 
 def std(x: list):

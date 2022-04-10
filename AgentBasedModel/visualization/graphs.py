@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import pandas as pd
 from AgentBasedModel.simulator import SimulatorInfo
 
 
@@ -56,4 +57,33 @@ def plot_volatility(info: SimulatorInfo, figsize=(6, 6)):
     plt.xlabel('Iterations')
     plt.ylabel('Spread size')
     plt.plot(info.spread_sizes, color='black')
+    plt.show()
+
+
+def print_order_book(info: SimulatorInfo, n=5):
+    val = pd.concat([
+        pd.DataFrame({
+            'Sell': [v.price for v in info.exchange.order_book['ask']],
+            'Quantity': [v.qty for v in info.exchange.order_book['ask']]
+            }).groupby('Sell').sum().reset_index().head(n),
+        pd.DataFrame({
+            'Buy': [v.price for v in info.exchange.order_book['bid']],
+            'Quantity': [v.qty for v in info.exchange.order_book['bid']]
+        }).groupby('Buy').sum().reset_index().sort_values('Buy', ascending=False).head(n)
+    ])
+    print(val[['Buy', 'Sell', 'Quantity']].fillna('').to_string(index=False))
+
+
+def plot_order_book(info: SimulatorInfo, figsize=(6, 6)):
+    bid_prices = [v.price for v in info.exchange.order_book['bid']]
+    bid_quantities = [v.qty for v in info.exchange.order_book['bid']]
+    bid = pd.DataFrame({'Price': bid_prices, 'Volume': bid_quantities}).groupby('Price').sum()
+    ask_prices = [v.price for v in info.exchange.order_book['ask']]
+    ask_quantities = [v.qty for v in info.exchange.order_book['ask']]
+    ask = pd.DataFrame({'Price': ask_prices, 'Volume': ask_quantities}).groupby('Price').sum()
+
+    plt.figure(figsize=(6, 6))
+    plt.title('Order book')
+    plt.plot(bid, label='bid', color='green')
+    plt.plot(ask, label='ask', color='red')
     plt.show()

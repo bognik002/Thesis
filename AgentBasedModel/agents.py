@@ -64,7 +64,7 @@ class NoiseTrader(Trader):
         self.name = f'NoiseTrader{self.id}'
         NoiseTrader.id += 1
 
-    def _draw_price(self, order_type, spread: dict, lamb=.5) -> float:
+    def _draw_price(self, order_type, spread: dict, lamb=1) -> float:
         """
         Draw price for limit order of Noise Agent. The price is calculated as:
         1) 35% - within the spread - uniform distribution
@@ -86,7 +86,7 @@ class NoiseTrader(Trader):
             if order_type == 'ask':
                 return round(spread['ask'] + delta, 2)
 
-    def _draw_quantity(self, order_exec, a=1, b=5) -> float:
+    def _draw_quantity(self, order_exec, a=1, b=10) -> float:
         """
         Draw quantity for any order of Noise Agent.
         1) If market order - currently the same as for limit order
@@ -111,7 +111,7 @@ class NoiseTrader(Trader):
         :return: void
         """
         spread = self.market.spread()
-        if not spread['bid'] or not spread['ask']:
+        if spread is None:
             return
 
         random_state = random.random()
@@ -131,7 +131,7 @@ class NoiseTrader(Trader):
                 self._sell_market(quantity)
 
         # Limit order
-        elif random_state > .50:
+        elif random_state > .5:
             price = self._draw_price(order_type, spread)
             quantity = self._draw_quantity('limit')
             if order_type == 'bid':

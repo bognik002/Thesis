@@ -62,9 +62,9 @@ class ExchangeAgent:
 
     def price(self) -> float or None:
         spread = self.spread()
-        if spread['bid'] and spread['ask']:
+        if spread:
             return (spread['bid'] + spread['ask']) / 2
-        return None
+        raise Exception(f'Price cannot be determined, since no orders either bid or ask')
 
     def limit_order(self, order: Order):
         """

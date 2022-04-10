@@ -28,7 +28,7 @@ class Simulator:
 
 class SimulatorInfo:
     """
-    SimulatorInfo is responsible for capturing data during simulating and retaining it
+    SimulatorInfo is responsible for capturing data during simulating
     """
 
     # todo добавить статистики для агентов
