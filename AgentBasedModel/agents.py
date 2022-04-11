@@ -141,7 +141,7 @@ class NoiseTrader(Trader):
                 self._sell_limit(quantity, price)
 
         # Cancellation order
-        elif random_state < .5:
+        elif random_state < .35:
             if self.orders:
                 order_n = random.randint(0, len(self.orders) - 1)
                 self._cancel_order(self.orders[order_n])
