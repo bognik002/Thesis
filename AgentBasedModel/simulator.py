@@ -42,10 +42,12 @@ class SimulatorInfo:
         self.orders_volumes = list()  # list -> (bid, ask) -> (sum, mean, q1, q3, std)
         self.orders_prices = list()  # list -> (bid, ask) -> (mean, q1, q3, std)
         self.spread_sizes = list()  # bid-ask spread
-        self.equity = list()  # sum of equity of agents
 
         # Agent Statistics
-        # ...
+        self.equity = list()  # sum of equity of agents
+        self.cash = list()  # sum of cash of agents
+        self.assets_qty = list()  # sum of number of assets of agents
+        self.assets_value = list()  # sum of value of assets of agents
 
     # todo добавить вычисления статистик для агентов
     def capture(self):
@@ -93,7 +95,9 @@ class SimulatorInfo:
             }
         })
         self.spread_sizes.append(self.exchange.spread()['ask'] - self.exchange.spread()['bid'])
-        self.equity.append(sum([trader.equity() for trader in self.traders]))
 
         # Agent Statistics
-        # ...
+        self.equity.append(sum([trader.equity() for trader in self.traders]))
+        self.cash.append(sum([trader.cash for trader in self.traders]))
+        self.assets_qty.append(sum([trader.assets for trader in self.traders]))
+        self.assets_value.append(self.equity[-1] - self.cash[-1])
