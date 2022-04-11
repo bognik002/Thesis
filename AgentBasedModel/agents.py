@@ -64,7 +64,7 @@ class NoiseTrader(Trader):
         self.name = f'NoiseTrader{self.id}'
         NoiseTrader.id += 1
 
-    def _draw_price(self, order_type, spread: dict, lamb=1) -> float:
+    def _draw_price(self, order_type, spread: dict, std=10) -> float:
         """
         Draw price for limit order of Noise Agent. The price is calculated as:
         1) 35% - within the spread - uniform distribution
@@ -72,6 +72,7 @@ class NoiseTrader(Trader):
 
         :return: price
         """
+        lamb = 1/std
         random_state = random.random()  # Determines IN spread OR OUT of spread
 
         # Within the spread
@@ -82,9 +83,9 @@ class NoiseTrader(Trader):
         else:
             delta = random.expovariate(lamb)
             if order_type == 'bid':
-                return round(spread['bid'] - delta, 2)
+                return round(spread['bid'] - delta, 1)
             if order_type == 'ask':
-                return round(spread['ask'] + delta, 2)
+                return round(spread['ask'] + delta, 1)
 
     def _draw_quantity(self, order_exec, a=1, b=10) -> float:
         """

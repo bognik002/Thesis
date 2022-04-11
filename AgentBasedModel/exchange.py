@@ -23,9 +23,11 @@ class ExchangeAgent:
         self._fill_book(price, std, volume)
 
     def _fill_book(self, price, std, volume):
-        prices = [round(random.normalvariate(price, std), 1) for i in range(volume)]  # orders prices
+        prices1 = [round(random.normalvariate(price - 2*std, std), 1) for i in range(volume // 2)]
+        prices2 = [round(random.normalvariate(price + 2*std, std), 1) for i in range(volume // 2)]
         quantities = [random.randint(1, 10) for i in range(volume)]
-        for (p, q) in zip(sorted(prices), quantities):
+
+        for (p, q) in zip(sorted(prices1 + prices2), quantities):
             if p > price:
                 order = Order(p, q, 'ask', None)
                 self.order_book['ask'].append(order)
