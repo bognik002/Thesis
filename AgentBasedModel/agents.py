@@ -28,11 +28,11 @@ class ExchangeAgent:
         Generate time series on future dividends.
         """
         # Generate future dividend
-        d = self.dividend_book[-1] + 0.1 * random.normalvariate(0, 1)  # random walk with 0.1 standard deviation
+        d = self.dividend_book[-1] + random.normalvariate(0, 1)  # random walk
         self.dividend_book.append(max(d, 0))  # dividend > 0
         self.dividend_book.pop(0)
 
-    def _fill_book(self, price, std, volume, div: float = 1):
+    def _fill_book(self, price, std, volume, div: float = 10):
         """
         Fill order book with random orders. Fill dividend book with n future dividends.
         """
@@ -52,7 +52,7 @@ class ExchangeAgent:
         # Dividend book
         for i in range(10):
             self.dividend_book.append(max(div, 0))  # dividend > 0
-            div += 0.1 * random.normalvariate(0, 1)  # random walk with 0.1 standard deviation
+            div += random.normalvariate(0, 1)  # random walk
 
     def _clear_book(self):
         """
