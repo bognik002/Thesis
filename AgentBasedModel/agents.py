@@ -1,10 +1,160 @@
-from AgentBasedModel.exchange import ExchangeAgent
-from AgentBasedModel.utils import Order
+from AgentBasedModel.utils import Order, OrderList
 import random
 
 
+class ExchangeAgent:
+    """
+    ExchangeAgent implements automatic orders handling within the order book. It supports limit orders,
+    market orders, cancel orders, returns current spread prices and volumes.
+    """
+    id = 0
+
+    def __init__(self, price: float or int = 500, std: float or int = 10, volume: int = 1000):
+        """
+        Initialization parameters
+        :param price: stock initial price
+        :param std: standard deviation of order prices in book
+        :param volume: number of orders in book
+        """
+        self.name = f'ExchangeAgent{self.id}'
+        ExchangeAgent.id += 1
+
+        self.order_book = {'bid': OrderList('bid'), 'ask': OrderList('ask')}
+        self.dividend_book = list()  # list of future dividends
+        self._fill_book(price, std, volume)
+
+    def call(self):
+        """
+        Generate time series on future dividends.
+        """
+        # Generate future dividend
+        d = self.dividend_book[-1] + 0.1 * random.normalvariate(0, 1)  # random walk with 0.1 standard deviation
+        self.dividend_book.append(max(d, 0))  # dividend > 0
+        self.dividend_book.pop(0)
+
+    def _fill_book(self, price, std, volume, div: float = 1):
+        """
+        Fill order book with random orders. Fill dividend book with n future dividends.
+        """
+        # Order book
+        prices1 = [round(random.normalvariate(price - 2*std, std), 1) for _ in range(volume // 2)]
+        prices2 = [round(random.normalvariate(price + 2*std, std), 1) for _ in range(volume // 2)]
+        quantities = [random.randint(1, 10) for _ in range(volume)]
+
+        for (p, q) in zip(sorted(prices1 + prices2), quantities):
+            if p > price:
+                order = Order(p, q, 'ask', None)
+                self.order_book['ask'].append(order)
+            else:
+                order = Order(p, q, 'bid', None)
+                self.order_book['bid'].push(order)
+
+        # Dividend book
+        for i in range(10):
+            self.dividend_book.append(max(div, 0))  # dividend > 0
+            div += 0.1 * random.normalvariate(0, 1)  # random walk with 0.1 standard deviation
+
+    def _clear_book(self):
+        """
+        Clears glass from orders with 0 qty.
+
+        complexity O(n)
+
+        :return: void
+        """
+        self.order_book['bid'] = OrderList.from_list([order for order in self.order_book['bid'] if order.qty > 0])
+        self.order_book['ask'] = OrderList.from_list([order for order in self.order_book['ask'] if order.qty > 0])
+
+    def spread(self) -> dict or None:
+        """
+        :return: {'bid': float, 'ask': float}
+        """
+        if self.order_book['bid'] and self.order_book['ask']:
+            return {'bid': self.order_book['bid'].first.price, 'ask': self.order_book['ask'].first.price}
+        return None
+
+    def spread_volume(self) -> dict or None:
+        """
+        :return: {'bid': float, 'ask': float}
+        """
+        if self.order_book['bid'] and self.order_book['ask']:
+            return {'bid': self.order_book['bid'].first.qty, 'ask': self.order_book['ask'].first.qty}
+        return None
+
+    def price(self) -> float or None:
+        spread = self.spread()
+        if spread:
+            return (spread['bid'] + spread['ask']) / 2
+        raise Exception(f'Price cannot be determined, since no orders either bid or ask')
+
+    def dividend(self, trader=None) -> list or float:
+        """
+        This function pays dividends to traders if they hold shares, inform about future dividends based
+        on agents' access level. If no trader passed then just inform about current dividend.
+        """
+        if trader is None:
+            return self.dividend_book[0]
+
+        trader.cash += trader.assets * self.dividend_book[0]
+        return self.dividend_book[:trader.access]
+
+    def limit_order(self, order: Order):
+        """
+        Executes limit order, fulfilling orders if on other side of spread
+
+        :return: void
+        """
+        bid, ask = self.spread().values()
+        if not bid or not ask:
+            return
+
+        if order.order_type == 'bid':
+            if order.price >= ask:
+                order = self.order_book['ask'].fulfill(order)
+            if order.qty > 0:
+                self.order_book['bid'].insert(order)
+            return
+
+        elif order.order_type == 'ask':
+            if order.price <= bid:
+                order = self.order_book['bid'].fulfill(order)
+            if order.qty > 0:
+                self.order_book['ask'].insert(order)
+
+    def market_order(self, order: Order) -> Order:
+        """
+        Executes market order, fulfilling orders on the other side of spread
+
+        :return: Order
+        """
+        if order.order_type == 'bid':
+            order = self.order_book['ask'].fulfill(order)
+        elif order.order_type == 'ask':
+            order = self.order_book['bid'].fulfill(order)
+        return order
+
+    def cancel_order(self, order: Order):
+        """
+        Cancel order from order book
+
+        :return: void
+        """
+        if order.order_type == 'bid':
+            self.order_book['bid'].remove(order)
+        elif order.order_type == 'ask':
+            self.order_book['ask'].remove(order)
+
+
 class Trader:
-    def __init__(self, market: ExchangeAgent, cash: float or int, assets: int = 0):
+    def __init__(self, market: ExchangeAgent, cash: float or int, assets: int = 0, access: int = 1):
+        """
+        Trader that is activated on call to perform action.
+
+        :param market: link to exchange agent
+        :param cash: trader's cash available
+        :param assets: trader's number of shares hold
+        :param access: number of future dividends informed
+        """
         self.name = 'Undefined'
 
         self.market = market
@@ -12,6 +162,7 @@ class Trader:
 
         self.cash = cash
         self.assets = assets
+        self.access = access
 
     def __str__(self) -> str:
         return self.name
@@ -59,12 +210,13 @@ class NoiseTrader(Trader):
     """
     id = 0
 
-    def __init__(self, market: ExchangeAgent, cash: float or int, assets: int = 0):
-        super().__init__(market, cash, assets)
+    def __init__(self, market: ExchangeAgent, cash: float or int, assets: int = 0, access: int = 1):
+        super().__init__(market, cash, assets, access)
         self.name = f'NoiseTrader{self.id}'
         NoiseTrader.id += 1
 
-    def _draw_price(self, order_type, spread: dict, std=10) -> float:
+    @staticmethod
+    def _draw_price(order_type, spread: dict, std=10) -> float:
         """
         Draw price for limit order of Noise Agent. The price is calculated as:
         1) 35% - within the spread - uniform distribution
@@ -87,7 +239,8 @@ class NoiseTrader(Trader):
             if order_type == 'ask':
                 return round(spread['ask'] + delta, 1)
 
-    def _draw_quantity(self, order_exec, a=1, b=10) -> float:
+    @staticmethod
+    def _draw_quantity(order_exec, a=1, b=10) -> float:
         """
         Draw quantity for any order of Noise Agent.
         1) If market order - currently the same as for limit order
@@ -107,9 +260,6 @@ class NoiseTrader(Trader):
     def call(self):
         """
         Function to call agent action
-
-        :param spread: {'bid': float, 'ask' float} - spread stamp with lag
-        :return: void
         """
         spread = self.market.spread()
         if spread is None:
