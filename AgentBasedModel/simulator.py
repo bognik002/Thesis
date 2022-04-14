@@ -13,6 +13,13 @@ class Simulator:
         self.traders = traders
         self.info = SimulatorInfo(self.exchange, self.traders)  # links to existing objects
 
+    def _payments(self):
+        for trader in self.traders:
+            # Dividend payments
+            trader.cash += trader.assets * self.exchange.dividend()
+            # Interest payment
+            trader.cash += trader.cash * self.exchange.risk_free
+
     def simulate(self, n_iter) -> object:
         for it in tqdm(range(n_iter), desc='Simulation'):
             # Capture current info
@@ -23,6 +30,7 @@ class Simulator:
                 trader.call()
 
             # Call exchange (dividends)
+            self._payments()
             self.exchange.call()
 
         return self

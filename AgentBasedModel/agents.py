@@ -9,18 +9,20 @@ class ExchangeAgent:
     """
     id = 0
 
-    def __init__(self, price: float or int = 500, std: float or int = 10, volume: int = 1000):
+    def __init__(self, price: float or int = 500, std: float or int = 10, volume: int = 1000, rf: float = 5e-4):
         """
         Initialization parameters
         :param price: stock initial price
         :param std: standard deviation of order prices in book
         :param volume: number of orders in book
+        :param rf: risk-free rate (interest rate for cash holdings of agents)
         """
         self.name = f'ExchangeAgent{self.id}'
         ExchangeAgent.id += 1
 
         self.order_book = {'bid': OrderList('bid'), 'ask': OrderList('ask')}
         self.dividend_book = list()  # list of future dividends
+        self.risk_free = rf
         self._fill_book(price, std, volume)
 
     def call(self):
@@ -28,11 +30,11 @@ class ExchangeAgent:
         Generate time series on future dividends.
         """
         # Generate future dividend
-        d = self.dividend_book[-1] + random.normalvariate(0, 1)  # random walk
+        d = self.dividend_book[-1] + self._next_dividend()
         self.dividend_book.append(max(d, 0))  # dividend > 0
         self.dividend_book.pop(0)
 
-    def _fill_book(self, price, std, volume, div: float = 10):
+    def _fill_book(self, price, std, volume, div: float = 0.25):
         """
         Fill order book with random orders. Fill dividend book with n future dividends.
         """
@@ -50,9 +52,9 @@ class ExchangeAgent:
                 self.order_book['bid'].push(order)
 
         # Dividend book
-        for i in range(10):
+        for i in range(20):
             self.dividend_book.append(max(div, 0))  # dividend > 0
-            div += random.normalvariate(0, 1)  # random walk
+            div += self._next_dividend()
 
     def _clear_book(self):
         """
@@ -89,14 +91,16 @@ class ExchangeAgent:
 
     def dividend(self, trader=None) -> list or float:
         """
-        This function pays dividends to traders if they hold shares, inform about future dividends based
-        on agents' access level. If no trader passed then just inform about current dividend.
+        Returns current dividend payment value. If called by a trader, returns expectation on future dividends
+        given information access.
         """
         if trader is None:
             return self.dividend_book[0]
+        return sum(self.dividend_book[:trader.access]) / trader.access
 
-        trader.cash += trader.assets * self.dividend_book[0]
-        return self.dividend_book[:trader.access]
+    @classmethod
+    def _next_dividend(cls):
+        return 1e-2 * random.normalvariate(0, 1)
 
     def limit_order(self, order: Order):
         """
@@ -146,6 +150,8 @@ class ExchangeAgent:
 
 
 class Trader:
+    id = 0
+
     def __init__(self, market: ExchangeAgent, cash: float or int, assets: int = 0, access: int = 1):
         """
         Trader that is activated on call to perform action.
@@ -155,7 +161,8 @@ class Trader:
         :param assets: trader's number of shares hold
         :param access: number of future dividends informed
         """
-        self.name = 'Undefined'
+        self.name = f'Trader{self.id}'
+        self.id += 1
 
         self.market = market
         self.orders = list()
@@ -208,12 +215,9 @@ class NoiseTrader(Trader):
     """
     NoiseTrader perform action on call. Creates noisy orders to recreate trading in real environment.
     """
-    id = 0
-
     def __init__(self, market: ExchangeAgent, cash: float or int, assets: int = 0, access: int = 1):
         super().__init__(market, cash, assets, access)
-        self.name = f'NoiseTrader{self.id}'
-        NoiseTrader.id += 1
+        self.name = f'Trader{self.id} (NoiseTrader)'
 
     @staticmethod
     def _draw_price(order_type, spread: dict, std=10) -> float:
@@ -258,9 +262,6 @@ class NoiseTrader(Trader):
             return random.randint(a, b)
 
     def call(self):
-        """
-        Function to call agent action
-        """
         spread = self.market.spread()
         if spread is None:
             return
@@ -295,3 +296,32 @@ class NoiseTrader(Trader):
             if self.orders:
                 order_n = random.randint(0, len(self.orders) - 1)
                 self._cancel_order(self.orders[order_n])
+
+
+class Fundamentalist(Trader):
+    """
+    Fundamentalist traders strictly believe in the information they receive. If they find an ask
+    order with a price lower or a bid order with a price higher than their estimated present
+    value, i.e. E(V|Ij,k), they accept the limit order, otherwise they put a new limit order
+    between the former best bid and best ask prices.
+    """
+    def __init__(self, market: ExchangeAgent, cash: float or int, assets: int = 0, access: int = 1):
+        super().__init__(market, cash, assets, access)
+        self.name = f'Trader{self.id} (Fundamentalist)'
+
+    def evaluate(self):
+        """
+        Evaluate stock using constant dividend model.
+        """
+        div = self.market.dividend(self)  # expected value of future dividends
+        r = self.market.risk_free  # risk-free rate
+        return div / r
+
+    def call(self):
+        fundamental_value = self.evaluate()
+        market_value = self.market.price()
+
+        if market_value > fundamental_value and self.assets > 0:
+            self._sell_market(1)
+        elif market_value < fundamental_value and self.cash > market_value:
+            self._buy_market(1)
