@@ -48,11 +48,12 @@ class SimulatorInfo:
 
         # Market Statistics
         self.prices = list()  # price at the end of iteration
+        self.spreads = list()  # bid-ask spreads
+        self.spread_sizes = list()  # bid-ask spread sizes
         self.dividends = list()
         self.orders_quantities = list()  # list -> (bid, ask)
         self.orders_volumes = list()  # list -> (bid, ask) -> (sum, mean, q1, q3, std)
         self.orders_prices = list()  # list -> (bid, ask) -> (mean, q1, q3, std)
-        self.spread_sizes = list()  # bid-ask spread
 
         # Agent Statistics
         self.equity = list()  # sum of equity of agents
@@ -67,6 +68,7 @@ class SimulatorInfo:
         """
         # Market Statistics
         self.prices.append(self.exchange.price())
+        self.spreads.append((self.exchange.spread()))
         self.dividends.append(self.exchange.dividend())
         self.orders_quantities.append({
             'bid': len(self.exchange.order_book['bid']),

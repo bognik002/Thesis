@@ -9,7 +9,7 @@ class ExchangeAgent:
     """
     id = 0
 
-    def __init__(self, price: float or int = 500, std: float or int = 1, volume: int = 1000, rf: float = 5e-4):
+    def __init__(self, price: float or int = 500, std: float or int = 10, volume: int = 1000, rf: float = 5e-4):
         """
         Initialization parameters
         :param price: stock initial price
@@ -318,28 +318,31 @@ class Fundamentalist(Trader):
         return div / r
 
     def call(self):
-        fundamental_price = self._evaluate()
-        market_price = self.market.price()
-        random_state = random.random()
+        fundamental_price = round(self._evaluate(), 1)
+        spread = self.market.spread()
 
         # Cancel all orders
-        for order in self.orders:
-            self._cancel_order(order)
+        if len(self.orders) > 5:
+            for order in self.orders:
+                self._cancel_order(order)
 
-        # Limit order
-        if random_state > .5:
-            if market_price > fundamental_price:
-                if self.cash // fundamental_price > 0:
-                    self._buy_limit(random.randint(0, self.cash // fundamental_price), fundamental_price)
-            else:
-                if self.assets > 0:
-                    self._sell_limit(random.randint(0, self.assets), fundamental_price)
+        random_state = random.random()  # determine order type
 
-        # Market order
-        else:
-            if market_price > fundamental_price:
-                if self.assets > 0:
-                    self._sell_market(random.randint(0, self.assets))
+        if fundamental_price >= spread['ask']:
+            if random_state > .5:
+                self._buy_market(random.randint(0, 10))
             else:
-                if self.cash // fundamental_price > 0:
-                    self._buy_market(random.randint(0, self.cash // self.market.price()))
+                self._sell_limit(random.randint(0, 10), fundamental_price + .1)
+
+        elif fundamental_price <= spread['bid']:
+            if random_state > .5:
+                self._sell_market(random.randint(0, 10))
+            else:
+                self._buy_limit(random.randint(0, 10), fundamental_price - .1)
+
+        # Inside the spread
+        elif spread['ask'] > fundamental_price > spread['bid']:
+            if random_state > .5:
+                self._buy_limit(random.randint(0, 10), fundamental_price - .1)
+            else:
+                self._sell_limit(random.randint(0, 10), fundamental_price + .1)

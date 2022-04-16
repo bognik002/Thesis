@@ -2,11 +2,14 @@ from AgentBasedModel.simulator import SimulatorInfo
 import matplotlib.pyplot as plt
 
 
-def plot_fundamental(info: SimulatorInfo, figsize=(6, 6)):
+def plot_fundamental(info: SimulatorInfo, spread=False, figsize=(6, 6)):
     plt.figure(figsize=figsize)
     plt.title('Price')
     plt.xlabel('Iterations')
     plt.ylabel('Price')
+    if spread:
+        plt.plot([el['bid'] for el in info.spreads], label='bid', color='green')
+        plt.plot([el['ask'] for el in info.spreads], label='ask', color='red')
     plt.plot(info.prices, label='market value', color='black')
     plt.plot([div / info.exchange.risk_free for div in info.dividends], label='fundamental value')
     plt.legend()
