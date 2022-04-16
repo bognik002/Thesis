@@ -9,7 +9,7 @@ class ExchangeAgent:
     """
     id = 0
 
-    def __init__(self, price: float or int = 500, std: float or int = 10, volume: int = 1000, rf: float = 5e-4):
+    def __init__(self, price: float or int = 500, std: float or int = 1, volume: int = 1000, rf: float = 5e-4):
         """
         Initialization parameters
         :param price: stock initial price
@@ -100,7 +100,7 @@ class ExchangeAgent:
 
     @classmethod
     def _next_dividend(cls):
-        return 1e-2 * random.normalvariate(0, 1)
+        return random.normalvariate(0, 1e-4)
 
     def limit_order(self, order: Order):
         """
@@ -309,7 +309,7 @@ class Fundamentalist(Trader):
         super().__init__(market, cash, assets, access)
         self.name = f'Trader{self.id} (Fundamentalist)'
 
-    def evaluate(self):
+    def _evaluate(self):
         """
         Evaluate stock using constant dividend model.
         """
@@ -318,10 +318,28 @@ class Fundamentalist(Trader):
         return div / r
 
     def call(self):
-        fundamental_value = self.evaluate()
-        market_value = self.market.price()
+        fundamental_price = self._evaluate()
+        market_price = self.market.price()
+        random_state = random.random()
 
-        if market_value > fundamental_value and self.assets > 0:
-            self._sell_market(1)
-        elif market_value < fundamental_value and self.cash > market_value:
-            self._buy_market(1)
+        # Cancel all orders
+        for order in self.orders:
+            self._cancel_order(order)
+
+        # Limit order
+        if random_state > .5:
+            if market_price > fundamental_price:
+                if self.cash // fundamental_price > 0:
+                    self._buy_limit(random.randint(0, self.cash // fundamental_price), fundamental_price)
+            else:
+                if self.assets > 0:
+                    self._sell_limit(random.randint(0, self.assets), fundamental_price)
+
+        # Market order
+        else:
+            if market_price > fundamental_price:
+                if self.assets > 0:
+                    self._sell_market(random.randint(0, self.assets))
+            else:
+                if self.cash // fundamental_price > 0:
+                    self._buy_market(random.randint(0, self.cash // self.market.price()))

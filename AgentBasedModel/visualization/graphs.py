@@ -11,7 +11,7 @@ def plot_price(info: SimulatorInfo, figsize=(6, 6)):
     plt.show()
 
 
-def plot_order_quantities(info: SimulatorInfo, figsize=(6, 6)):
+def plot_quantities(info: SimulatorInfo, figsize=(6, 6)):
     plt.figure(figsize=figsize)
     plt.title('Quantity of limit orders in book')
     plt.xlabel('Iterations')

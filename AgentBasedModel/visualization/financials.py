@@ -2,6 +2,17 @@ from AgentBasedModel.simulator import SimulatorInfo
 import matplotlib.pyplot as plt
 
 
+def plot_fundamental(info: SimulatorInfo, figsize=(6, 6)):
+    plt.figure(figsize=figsize)
+    plt.title('Price')
+    plt.xlabel('Iterations')
+    plt.ylabel('Price')
+    plt.plot(info.prices, label='market value', color='black')
+    plt.plot([div / info.exchange.risk_free for div in info.dividends], label='fundamental value')
+    plt.legend()
+    plt.show()
+
+
 def plot_equity(info: SimulatorInfo, figsize=(6, 6)):
     plt.figure(figsize=figsize)
     plt.title('Agents aggregate equity')
