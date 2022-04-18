@@ -16,9 +16,9 @@ class Simulator:
     def _payments(self):
         for trader in self.traders:
             # Dividend payments
-            trader.cash += trader.assets * self.exchange.dividend()
+            trader.cash += trader.assets * self.exchange.dividend()  # allow negative dividends
             # Interest payment
-            trader.cash += trader.cash * self.exchange.risk_free
+            trader.cash += trader.cash * self.exchange.risk_free  # allow risk-free loan
 
     def simulate(self, n_iter) -> object:
         for it in tqdm(range(n_iter), desc='Simulation'):

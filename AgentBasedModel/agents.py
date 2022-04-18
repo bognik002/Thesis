@@ -89,14 +89,14 @@ class ExchangeAgent:
             return (spread['bid'] + spread['ask']) / 2
         raise Exception(f'Price cannot be determined, since no orders either bid or ask')
 
-    def dividend(self, trader=None) -> list or float:
+    def dividend(self, access: int = None) -> list or float:
         """
         Returns current dividend payment value. If called by a trader, returns expectation on future dividends
         given information access.
         """
-        if trader is None:
+        if access is None:
             return self.dividend_book[0]
-        return sum(self.dividend_book[:trader.access]) / trader.access
+        return sum(self.dividend_book[:access]) / access
 
     @classmethod
     def _next_dividend(cls):
@@ -220,7 +220,7 @@ class NoiseTrader(Trader):
         self.name = f'Trader{self.id} (NoiseTrader)'
 
     @staticmethod
-    def _draw_price(order_type, spread: dict, std=10) -> float:
+    def draw_price(order_type, spread: dict, std=10) -> float:
         """
         Draw price for limit order of Noise Agent. The price is calculated as:
         1) 35% - within the spread - uniform distribution
@@ -244,7 +244,7 @@ class NoiseTrader(Trader):
                 return round(spread['ask'] + delta, 1)
 
     @staticmethod
-    def _draw_quantity(order_exec, a=1, b=10) -> float:
+    def draw_quantity(order_exec, a=1, b=10) -> float:
         """
         Draw quantity for any order of Noise Agent.
         1) If market order - currently the same as for limit order
@@ -276,7 +276,7 @@ class NoiseTrader(Trader):
         random_state = random.random()
         # Market order
         if random_state > .85:
-            quantity = self._draw_quantity('market')
+            quantity = self.draw_quantity('market')
             if order_type == 'bid':
                 self._buy_market(quantity)
             elif order_type == 'ask':
@@ -284,8 +284,8 @@ class NoiseTrader(Trader):
 
         # Limit order
         elif random_state > .5:
-            price = self._draw_price(order_type, spread)
-            quantity = self._draw_quantity('limit')
+            price = self.draw_price(order_type, spread)
+            quantity = self.draw_quantity('limit')
             if order_type == 'bid':
                 self._buy_limit(quantity, price)
             elif order_type == 'ask':
@@ -313,7 +313,7 @@ class Fundamentalist(Trader):
         """
         Evaluate stock using constant dividend model.
         """
-        div = self.market.dividend(self)  # expected value of future dividends
+        div = self.market.dividend(self.access)  # expected value of future dividends
         r = self.market.risk_free  # risk-free rate
         return div / r
 
@@ -346,3 +346,76 @@ class Fundamentalist(Trader):
                 self._buy_limit(random.randint(0, 10), fundamental_price - .1)
             else:
                 self._sell_limit(random.randint(0, 10), fundamental_price + .1)
+
+
+class Chartist(Trader):
+    """
+    Chartist traders are searching for trends in the price movements. In case of three
+    consecutive upward (downward) price steps they buy (sell), otherwise they give a new
+    order to the limit order book.
+    """
+    def __init__(self, market: ExchangeAgent, cash: float or int, assets: int = 0, access: int = 1, steps: int = 3):
+        super().__init__(market, cash, assets, access)
+        self.name = f'Trader{self.id} (Chartist)'
+        self.steps = steps  # number of steps to determine trend
+        self.history = list()  # historical prices of past n steps
+
+    def _trend(self, steps: int) -> (bool, str or None):
+        """
+        Check whether there is a price trend present. And return what kind of trend:
+        'upward' or 'downward'.
+
+        :param steps: number of steps in past to measure trend
+        :return: (True - trend or False - no trend, 'upward' or 'downward')
+        """
+        if len(self.history) > steps:
+            upward = list()
+            for i in range(steps):
+                upward.append(self.history[i] < self.history[i+1])
+
+            downward = list()
+            for i in range(steps):
+                downward.append(self.history[i] > self.history[i + 1])
+
+            if all(upward):  # upward trend
+                return True, 'upward'
+
+            if all(downward):  # downward trend
+                return True, 'downward'
+
+        return False, None  # no trend or not enough history
+
+    def call(self):
+        """
+        If 'steps' consecutive steps of upward (downward) price movements -> buy (sell) market order. If there are no
+        such trend, act as random trader placing only limit orders.
+        """
+        self.history.append(self.market.price())  # Append current price
+        if len(self.history) > self.steps + 1:  # Delete oldest price if too many
+            self.history.pop(0)
+
+        spread = self.market.spread()
+        trend_bool, direction = self._trend(self.steps)
+
+        # Cancel all orders
+        if len(self.orders) > 5:
+            for order in self.orders:
+                self._cancel_order(order)
+
+        # Trend
+        if trend_bool:
+            if direction == 'upward':
+                self._buy_market(random.randint(0, 10))
+            elif direction == 'downward':
+                self._sell_market(random.randint(0, 10))
+        # No Trend
+        else:
+            random_state = random.random()  # whether bid or ask
+            # Buy
+            if random_state > .5:
+                price = NoiseTrader.draw_price('bid', spread)
+                self._buy_limit(random.randint(0, 10), price)
+            # Sell
+            else:
+                price = NoiseTrader.draw_price('ask', spread)
+                self._sell_limit(random.randint(0, 10), price)
