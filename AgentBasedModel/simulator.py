@@ -54,6 +54,7 @@ class SimulatorInfo:
         self.equities = list()  # agent: equity
         self.cash = list()  # agent: cash
         self.assets = list()  # agent: number of assets
+        self.types = list()
 
         """
         # Market Statistics
@@ -77,7 +78,23 @@ class SimulatorInfo:
     # todo может рандомно инициализировать access, step, etc. в начале у Universalist, записывать их сразу?
     def capture(self):
         """
-        Method called at the end of each iteration to capture current statistics on market
+        Method called at the end of each iteration to capture basic info on simulation.
+
+        **Attributes:**
+
+        *Market Statistics*
+
+        - :class:`list[float]` **prices** --> stock prices on each iteration
+        - :class:`list[dict]` **spreads** --> order book spreads on each iteration
+        - :class:`list[float]` **dividends** --> dividend paid on each iteration
+        - :class:`list[dict[dict]]` **orders** --> order book price, volume, quantity stats on each iteration
+
+        *Traders Statistics*
+
+        - :class:`list[dict]` **equities** --> each agent's equity on each iteration
+        - :class:`list[dict]` **cash** --> each agent's cash on each iteration
+        - :class:`list[dict]` **assets** --> each agent's number of stocks on each iteration
+        - :class:`list[dict]` **types** --> each agent's type on each iteration
         """
         # Market Statistics
         self.prices.append(self.exchange.price())
@@ -85,30 +102,36 @@ class SimulatorInfo:
         self.dividends.append(self.exchange.dividend())
         self.orders.append({
             'quantity': {'bid': len(self.exchange.order_book['bid']), 'ask': len(self.exchange.order_book['ask'])},
-            'price mean': {
-                'bid': mean([order.price for order in self.exchange.order_book['bid']]),
-                'ask': mean([order.price for order in self.exchange.order_book['ask']])},
-            'price std': {
-                'bid': std([order.price for order in self.exchange.order_book['bid']]),
-                'ask': std([order.price for order in self.exchange.order_book['ask']])},
-            'volume sum': {
-                'bid': sum([order.qty for order in self.exchange.order_book['bid']]),
-                'ask': sum([order.qty for order in self.exchange.order_book['ask']])},
-            'volume mean': {
-                'bid': mean([order.qty for order in self.exchange.order_book['bid']]),
-                'ask': mean([order.qty for order in self.exchange.order_book['ask']])},
-            'volume std': {
-                'bid': std([order.qty for order in self.exchange.order_book['bid']]),
-                'ask': std([order.qty for order in self.exchange.order_book['ask']])}
+            # 'price mean': {
+            #     'bid': mean([order.price for order in self.exchange.order_book['bid']]),
+            #     'ask': mean([order.price for order in self.exchange.order_book['ask']])},
+            # 'price std': {
+            #     'bid': std([order.price for order in self.exchange.order_book['bid']]),
+            #     'ask': std([order.price for order in self.exchange.order_book['ask']])},
+            # 'volume sum': {
+            #     'bid': sum([order.qty for order in self.exchange.order_book['bid']]),
+            #     'ask': sum([order.qty for order in self.exchange.order_book['ask']])},
+            # 'volume mean': {
+            #     'bid': mean([order.qty for order in self.exchange.order_book['bid']]),
+            #     'ask': mean([order.qty for order in self.exchange.order_book['ask']])},
+            # 'volume std': {
+            #     'bid': std([order.qty for order in self.exchange.order_book['bid']]),
+            #     'ask': std([order.qty for order in self.exchange.order_book['ask']])}
         })
 
         # Trader Statistics
-        self.equities.append({t_id: t.equity() for t_id, t in self.traders.items()})
-        self.cash.append({t_id: t.cash for t_id, t in self.traders.items()})
-        self.assets.append({t_id: t.assets for t_id, t in self.traders.items()})
+        self.equities.append({t_id: t['link'].equity() for t_id, t in self.traders.items()})
+        self.cash.append({t_id: t['link'].cash for t_id, t in self.traders.items()})
+        self.assets.append({t_id: t['link'].assets for t_id, t in self.traders.items()})
+        self.types.append({t_id: t['link'].type for t_id, t in self.traders.items()})
 
-
-        """self.equity.append(sum([trader.equity() for trader in self.traders]))
+        """
+        self.equity.append(sum([trader.equity() for trader in self.traders]))
         self.cash.append(sum([trader.cash for trader in self.traders]))
         self.assets_qty.append(sum([trader.assets for trader in self.traders]))
-        self.assets_value.append(self.equity[-1] - self.cash[-1])"""
+        self.assets_value.append(self.equity[-1] - self.cash[-1])
+        """
+
+    # Market statistics (advanced)
+    def assets_value(self) -> list:
+        pass
