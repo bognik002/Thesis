@@ -161,6 +161,7 @@ class Trader:
         :param assets: trader's number of shares hold
         :param access: number of future dividends informed
         """
+        self.type = 'Unknown'
         self.name = f'Trader{self.id}'
         self.id += 1
 
@@ -169,7 +170,6 @@ class Trader:
 
         self.cash = cash
         self.assets = assets
-        self.access = access
 
     def __str__(self) -> str:
         return self.name
@@ -211,13 +211,13 @@ class Trader:
         self.orders.remove(order)
 
 
-class NoiseTrader(Trader):
+class Random(Trader):
     """
-    NoiseTrader perform action on call. Creates noisy orders to recreate trading in real environment.
+    Random perform action on call. Creates noisy orders to recreate trading in real environment.
     """
-    def __init__(self, market: ExchangeAgent, cash: float or int, assets: int = 0, access: int = 1):
-        super().__init__(market, cash, assets, access)
-        self.name = f'Trader{self.id} (NoiseTrader)'
+    def __init__(self, market: ExchangeAgent, cash: float or int, assets: int = 0):
+        super().__init__(market, cash, assets)
+        self.type = 'Random'
 
     @staticmethod
     def draw_price(order_type, spread: dict, std=10) -> float:
@@ -246,9 +246,7 @@ class NoiseTrader(Trader):
     @staticmethod
     def draw_quantity(order_exec, a=1, b=10) -> float:
         """
-        Draw quantity for any order of Noise Agent.
-        1) If market order - currently the same as for limit order
-        2) If limit order - volume is derived from log-normal distribution
+        Draw random quantity to buy
 
         :param order_exec: 'market' or 'limit'
         :return: quantity for order
@@ -307,7 +305,8 @@ class Fundamentalist(Trader):
     """
     def __init__(self, market: ExchangeAgent, cash: float or int, assets: int = 0, access: int = 1):
         super().__init__(market, cash, assets, access)
-        self.name = f'Trader{self.id} (Fundamentalist)'
+        self.type = 'Fundamentalist'
+        self.access = access
 
     def _evaluate(self):
         """
@@ -318,7 +317,7 @@ class Fundamentalist(Trader):
         return div / r
 
     def call(self):
-        fundamental_price = round(self._evaluate(), 1)
+        price = round(self._evaluate(), 1)  # fundamental price
         spread = self.market.spread()
 
         # Cancel all orders
@@ -328,24 +327,24 @@ class Fundamentalist(Trader):
 
         random_state = random.random()  # determine order type
 
-        if fundamental_price >= spread['ask']:
+        if price >= spread['ask']:
             if random_state > .5:
-                self._buy_market(random.randint(0, 10))
+                self._buy_market(Random.draw_quantity('market'))
             else:
-                self._sell_limit(random.randint(0, 10), fundamental_price + .1)
+                self._sell_limit(Random.draw_quantity('limit'), price + .1)
 
-        elif fundamental_price <= spread['bid']:
+        elif price <= spread['bid']:
             if random_state > .5:
-                self._sell_market(random.randint(0, 10))
+                self._sell_market(Random.draw_quantity('market'))
             else:
-                self._buy_limit(random.randint(0, 10), fundamental_price - .1)
+                self._buy_limit(Random.draw_quantity('limit'), price - .1)
 
         # Inside the spread
-        elif spread['ask'] > fundamental_price > spread['bid']:
+        elif spread['ask'] > price > spread['bid']:
             if random_state > .5:
-                self._buy_limit(random.randint(0, 10), fundamental_price - .1)
+                self._buy_limit(Random.draw_quantity('limit'), price - .1)
             else:
-                self._sell_limit(random.randint(0, 10), fundamental_price + .1)
+                self._sell_limit(Random.draw_quantity('limit'), price + .1)
 
 
 class Chartist(Trader):
@@ -356,7 +355,7 @@ class Chartist(Trader):
     """
     def __init__(self, market: ExchangeAgent, cash: float or int, assets: int = 0, access: int = 1, steps: int = 3):
         super().__init__(market, cash, assets, access)
-        self.name = f'Trader{self.id} (Chartist)'
+        self.type = 'Chartist'
         self.steps = steps  # number of steps to determine trend
         self.history = list()  # historical prices of past n steps
 
@@ -405,17 +404,17 @@ class Chartist(Trader):
         # Trend
         if trend_bool:
             if direction == 'upward':
-                self._buy_market(random.randint(0, 10))
+                self._buy_market(Random.draw_quantity('market'))
             elif direction == 'downward':
-                self._sell_market(random.randint(0, 10))
+                self._sell_market(Random.draw_quantity('market'))
         # No Trend
         else:
             random_state = random.random()  # whether bid or ask
             # Buy
             if random_state > .5:
-                price = NoiseTrader.draw_price('bid', spread)
-                self._buy_limit(random.randint(0, 10), price)
+                price = Random.draw_price('bid', spread)
+                self._buy_limit(Random.draw_quantity('limit'), price)
             # Sell
             else:
-                price = NoiseTrader.draw_price('ask', spread)
-                self._sell_limit(random.randint(0, 10), price)
+                price = Random.draw_price('ask', spread)
+                self._sell_limit(Random.draw_quantity('limit'), price)
