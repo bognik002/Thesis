@@ -30,7 +30,6 @@ def plot_assets(info: SimulatorInfo, figsize=(6, 6)):
     plt.show()
 
 
-# todo неправильно рисует график
 def plot_types(info: SimulatorInfo, figsize=(6, 6)):
     plt.figure(figsize=figsize)
     plt.title('Traders` types')
@@ -39,4 +38,13 @@ def plot_types(info: SimulatorInfo, figsize=(6, 6)):
     for tr_type in ['Random', 'Fundamentalist', 'Chartist']:
         plt.plot([sum([t == tr_type for t in v.values()]) for v in info.types], label=tr_type)
     plt.legend()
+    plt.show()
+
+
+def plot_returns(info: SimulatorInfo, rolling: int = 1, figsize=(6, 6)):
+    plt.figure(figsize=figsize)
+    plt.title('Traders` mean return')
+    plt.xlabel('Iterations')
+    plt.ylabel('Mean Return')
+    plt.plot(info.returns(rolling), color='black')
     plt.show()

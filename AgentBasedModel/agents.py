@@ -163,7 +163,8 @@ class Trader:
         """
         self.type = 'Unknown'
         self.name = f'Trader{self.id}'
-        self.id += 1
+        self.id = Trader.id
+        Trader.id += 1
 
         self.market = market
         self.orders = list()
@@ -246,9 +247,11 @@ class Random(Trader):
     @staticmethod
     def draw_quantity(order_exec, a=1, b=10) -> float:
         """
-        Draw random quantity to buy
+        Draw random quantity to buy from uniform distribution.
 
         :param order_exec: 'market' or 'limit'
+        :param a: minimal quantity
+        :param b: maximal quantity
         :return: quantity for order
         """
         # Market order
@@ -314,7 +317,7 @@ class Fundamentalist(Trader):
         """
         div = self.market.dividend(self.access)  # expected value of future dividends
         r = self.market.risk_free  # risk-free rate
-        return div / r
+        return div / r + div
 
     def call(self):
         price = round(self._evaluate(), 1)  # fundamental price
