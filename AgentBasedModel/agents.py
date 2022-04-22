@@ -9,7 +9,7 @@ class ExchangeAgent:
     """
     id = 0
 
-    def __init__(self, price: float or int = 500, std: float or int = 10, volume: int = 1000, rf: float = 5e-4):
+    def __init__(self, price: float or int = 100, std: float or int = 5, volume: int = 1000, rf: float = 5e-4):
         """
         Initialization parameters
         :param price: stock initial price
@@ -34,13 +34,13 @@ class ExchangeAgent:
         self.dividend_book.append(max(d, 0))  # dividend > 0
         self.dividend_book.pop(0)
 
-    def _fill_book(self, price, std, volume, div: float = 0.25):
+    def _fill_book(self, price, std, volume, div: float = 0.05):
         """
         Fill order book with random orders. Fill dividend book with n future dividends.
         """
         # Order book
-        prices1 = [round(random.normalvariate(price - 2*std, std), 1) for _ in range(volume // 2)]
-        prices2 = [round(random.normalvariate(price + 2*std, std), 1) for _ in range(volume // 2)]
+        prices1 = [round(random.normalvariate(price - std, std), 1) for _ in range(volume // 2)]
+        prices2 = [round(random.normalvariate(price + std, std), 1) for _ in range(volume // 2)]
         quantities = [random.randint(1, 10) for _ in range(volume)]
 
         for (p, q) in zip(sorted(prices1 + prices2), quantities):
@@ -99,8 +99,8 @@ class ExchangeAgent:
         return sum(self.dividend_book[:access]) / access
 
     @classmethod
-    def _next_dividend(cls):
-        return random.normalvariate(0, 1e-4)
+    def _next_dividend(cls, std=5e-5):
+        return random.normalvariate(0, std)
 
     def limit_order(self, order: Order):
         """
@@ -152,14 +152,13 @@ class ExchangeAgent:
 class Trader:
     id = 0
 
-    def __init__(self, market: ExchangeAgent, cash: float or int, assets: int = 0, access: int = 1):
+    def __init__(self, market: ExchangeAgent, cash: float or int, assets: int = 0):
         """
         Trader that is activated on call to perform action.
 
         :param market: link to exchange agent
         :param cash: trader's cash available
         :param assets: trader's number of shares hold
-        :param access: number of future dividends informed
         """
         self.type = 'Unknown'
         self.name = f'Trader{self.id}'
@@ -245,7 +244,7 @@ class Random(Trader):
                 return round(spread['ask'] + delta, 1)
 
     @staticmethod
-    def draw_quantity(order_exec, a=1, b=10) -> float:
+    def draw_quantity(order_exec, a=1, b=5) -> float:
         """
         Draw random quantity to buy from uniform distribution.
 
@@ -307,7 +306,13 @@ class Fundamentalist(Trader):
     between the former best bid and best ask prices.
     """
     def __init__(self, market: ExchangeAgent, cash: float or int, assets: int = 0, access: int = 1):
-        super().__init__(market, cash, assets, access)
+        """
+        :param market: exchange agent link
+        :param cash: number of cash
+        :param assets: number of assets
+        :param access: number of future dividends informed
+        """
+        super().__init__(market, cash, assets)
         self.type = 'Fundamentalist'
         self.access = access
 
@@ -356,8 +361,14 @@ class Chartist(Trader):
     consecutive upward (downward) price steps they buy (sell), otherwise they give a new
     order to the limit order book.
     """
-    def __init__(self, market: ExchangeAgent, cash: float or int, assets: int = 0, access: int = 1, steps: int = 3):
-        super().__init__(market, cash, assets, access)
+    def __init__(self, market: ExchangeAgent, cash: float or int, assets: int = 0, steps: int = 3):
+        """
+        :param market: exchange agent link
+        :param cash: number of cash
+        :param assets: number of assets
+        :param steps: number of iterations to determine trend
+        """
+        super().__init__(market, cash, assets)
         self.type = 'Chartist'
         self.steps = steps  # number of steps to determine trend
         self.history = list()  # historical prices of past n steps
@@ -421,3 +432,39 @@ class Chartist(Trader):
             else:
                 price = Random.draw_price('ask', spread)
                 self._sell_limit(Random.draw_quantity('limit'), price)
+
+
+class Universalist(Fundamentalist, Chartist):
+    """
+    Universalist mixes Fundamentalist, Chartist trading strategies, and allows to change from
+    one strategy to another.
+    """
+    def __init__(self, market: ExchangeAgent, cash: float or int, assets: int = 0, access: int = 1, steps: int = 3):
+        """
+        :param market: exchange agent link
+        :param cash: number of cash
+        :param assets: number of assets
+        :param access: number of future dividends informed
+        :param steps: number of iterations to determine trend
+        """
+        super().__init__(market, cash, assets)
+        self.type = 'Chartist' if random.random() > .5 else 'Fundamentalist'  # randomly decide type
+        self.access = access  # next n dividend payments known (Fundamentalist)
+        self.steps = steps  # number of steps to determine trend (Chartist)
+        self.history = list()  # historical prices of past n steps (Chartist)
+
+    def call(self):
+        """
+        Call one of parents' methods depending on what type it is currently set.
+        """
+        if self.type == 'Chartist':
+            Chartist.call(self)
+        elif self.type == 'Fundamentalist':
+            Fundamentalist.call(self)
+
+    def change(self):
+        """
+        Change trader's type and hence trading strategy
+        """
+        self.type = 'Chartist' if self.type == 'Fundamentalist' else 'Fundamentalist'
+        self.history = list()  # need to clear out (it may contain some irrelevant past info)

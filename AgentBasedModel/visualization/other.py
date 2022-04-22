@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 
-def print_order_book(info: SimulatorInfo, n=5):
+def print_book(info: SimulatorInfo, n=5):
     val = pd.concat([
         pd.DataFrame({
             'Sell': [v.price for v in info.exchange.order_book['ask']],
@@ -17,7 +17,7 @@ def print_order_book(info: SimulatorInfo, n=5):
     print(val[['Buy', 'Sell', 'Quantity']].fillna('').to_string(index=False))
 
 
-def plot_order_book(info: SimulatorInfo, bins=50, figsize=(6, 6)):
+def plot_book(info: SimulatorInfo, bins=50, figsize=(6, 6)):
     bid = list()
     for order in info.exchange.order_book['bid']:
         for p in range(order.qty):

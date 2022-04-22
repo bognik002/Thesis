@@ -1,4 +1,6 @@
-from AgentBasedModel.agents import ExchangeAgent
+import random
+
+from AgentBasedModel.agents import ExchangeAgent, Universalist
 
 from AgentBasedModel.utils.math import *
 from tqdm import tqdm
@@ -9,8 +11,10 @@ class Simulator:
     Simulator is responsible for launching agents' actions and executing scenarios
     """
     def __init__(self, exchange: ExchangeAgent = None, traders: list = None):
+        random.shuffle(traders)
+
         self.exchange = exchange
-        self.traders = traders  # todo Сделать рандомный порядок для агентов (shuffle)
+        self.traders = traders
         self.info = SimulatorInfo(self.exchange, self.traders)  # links to existing objects
 
     def _payments(self):
@@ -29,8 +33,18 @@ class Simulator:
             for trader in self.traders:
                 trader.call()
 
+            # Payments and dividends
             self._payments()  # pay dividends
             self.exchange.call()  # generate next dividends
+
+            # Change behaviour
+            if not it % 20 and it > 0:
+                returns_std = std([mean(self.info.returns(trader, last=10)) for trader in self.traders])
+                for trader in self.traders:
+                    if type(trader) == Universalist:
+                        ab_returns = self.info.abnormal_returns(trader, last=10)
+                        if mean(ab_returns) / returns_std < random.normalvariate(0, 1) - 1:
+                            trader.change()
 
         return self
 
@@ -127,17 +141,18 @@ class SimulatorInfo:
 
     # Advanced Statistics
     def returns(self, trader=None, rolling: int = 1, last: int = None) -> list:
+        if last is None:  # if not need to return last n, determine starting index
+            last = len(self.equities) - 1
+
         if trader is None:
-            eq = [mean(v.values()) for v in self.equities]
+            eq = [mean(v.values()) for v in self.equities[-last + 1:]]
         else:
-            eq = [v[trader.id] for v in self.equities]
+            eq = [v[trader.id] for v in self.equities[-last + 1:]]
 
         r = [(eq[i] - eq[i-1]) / eq[i-1] for i in range(len(eq)) if i > 0]  # calculate returns
         r_rolled = [mean(r[i-rolling:i]) for i in range(len(r) + 1) if i - rolling >= 0]  # apply rolling
 
-        if last is None:  # if not need to return last n, determine starting index
-            last = len(r_rolled)
-        return r_rolled[-last:]
+        return r_rolled
 
     def abnormal_returns(self, trader, rolling: int = 1, last: int = None) -> list:
         tr_returns = self.returns(trader, rolling, last)
