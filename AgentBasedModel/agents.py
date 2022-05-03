@@ -9,7 +9,7 @@ class ExchangeAgent:
     """
     id = 0
 
-    def __init__(self, price: float or int = 100, std: float or int = 5, volume: int = 1000, rf: float = 5e-4):
+    def __init__(self, price: float or int = 100, std: float or int = 5, volume: int = 2000, rf: float = 5e-4):
         """
         Initialization parameters
         :param price: stock initial price
@@ -220,7 +220,7 @@ class Random(Trader):
         self.type = 'Random'
 
     @staticmethod
-    def draw_price(order_type, spread: dict, std=10) -> float:
+    def draw_price(order_type, spread: dict, std=5) -> float:
         """
         Draw price for limit order of Noise Agent. The price is calculated as:
         1) 35% - within the spread - uniform distribution
@@ -322,7 +322,7 @@ class Fundamentalist(Trader):
         """
         div = self.market.dividend(self.access)  # expected value of future dividends
         r = self.market.risk_free  # risk-free rate
-        return div / r + div
+        return div / r
 
     def call(self):
         price = round(self._evaluate(), 1)  # fundamental price

@@ -46,5 +46,5 @@ def plot_returns(info: SimulatorInfo, rolling: int = 1, figsize=(6, 6)):
     plt.title('Traders` mean return')
     plt.xlabel('Iterations')
     plt.ylabel('Mean Return')
-    plt.plot(info.returns(rolling), color='black')
+    plt.plot(info.returns(rolling=rolling), color='black')
     plt.show()

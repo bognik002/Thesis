@@ -1,13 +1,15 @@
-import AgentBasedModel as abm
+from AgentBasedModel.agents import ExchangeAgent, Random, Fundamentalist, Chartist, Universalist
+from AgentBasedModel.simulator import Simulator
 from AgentBasedModel.visualization import *
 
-exchange = abm.ExchangeAgent(volume=1000)
-simulator = abm.Simulator(**{
+
+exchange = ExchangeAgent(volume=2000)
+simulator = Simulator(**{
     'exchange': exchange,
-    'traders': [abm.Random(exchange, 2000, 4) for i in range(10)]
+    'traders': [Random(exchange, 2500, 25) for _ in range(20)]
 })
 
-simulator.simulate(10000)
+simulator.simulate(1000)
 info = simulator.info
 
 plot_price(info)

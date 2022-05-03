@@ -43,7 +43,7 @@ class Simulator:
                 for trader in self.traders:
                     if type(trader) == Universalist:
                         ab_returns = self.info.abnormal_returns(trader, last=10)
-                        if mean(ab_returns) / returns_std < random.normalvariate(0, 1) - 1:
+                        if mean(ab_returns) / returns_std < random.normalvariate(0, 1):
                             trader.change()
 
         return self
