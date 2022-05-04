@@ -3,12 +3,34 @@ from AgentBasedModel.utils.math import mean
 import matplotlib.pyplot as plt
 
 
-def plot_equity(info: SimulatorInfo, figsize=(6, 6)):
+def plot_equity(info: SimulatorInfo, trader_type: str = None, figsize=(6, 6)):
     plt.figure(figsize=figsize)
     plt.title('Traders` mean equity')
     plt.xlabel('Iterations')
     plt.ylabel('Mean Equity')
-    plt.plot([mean(v.values()) for v in info.equities], color='black')
+    if trader_type is not None:
+        iterations = list()
+        values = list()
+        for i in range(len(info.types)):  # iterations
+            v = [eq for tr_id, eq in info.equities[i].items() if info.types[i][tr_id] == trader_type]
+            if v:
+                iterations.append(i)
+                values.append(mean(v))
+
+        plt.plot(iterations, values, label=trader_type, color='black')
+    else:
+        for trader_type in ['Random', 'Fundamentalist', 'Chartist']:
+            iterations = list()
+            values = list()
+            for i in range(len(info.types)):  # iterations
+                v = [eq for tr_id, eq in info.equities[i].items() if info.types[i][tr_id] == trader_type]
+                if v:
+                    iterations.append(i)
+                    values.append(mean(v))
+
+            plt.plot(iterations, values, label=trader_type)
+
+    plt.legend()
     plt.show()
 
 

@@ -68,7 +68,7 @@ class SimulatorInfo:
         self.equities = list()  # agent: equity
         self.cash = list()  # agent: cash
         self.assets = list()  # agent: number of assets
-        self.types = list()
+        self.types = list()  # agent: current type
 
         """
         # Market Statistics
