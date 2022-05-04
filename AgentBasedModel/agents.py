@@ -91,12 +91,12 @@ class ExchangeAgent:
 
     def dividend(self, access: int = None) -> list or float:
         """
-        Returns current dividend payment value. If called by a trader, returns expectation on future dividends
+        Returns current dividend payment value. If called by a trader, returns n future dividends
         given information access.
         """
         if access is None:
             return self.dividend_book[0]
-        return sum(self.dividend_book[:access]) / access
+        return self.dividend_book[len(self.dividend_book) - access:]
 
     @classmethod
     def _next_dividend(cls, std=5e-5):
@@ -322,7 +322,10 @@ class Fundamentalist(Trader):
         """
         div = self.market.dividend(self.access)  # expected value of future dividends
         r = self.market.risk_free  # risk-free rate
-        return div / r
+
+        perp = div[-1] / r / (1 + r)**(len(div) - 1)  # perpetual payments
+        known = sum([div[i] / (1 + r)**(i + 1) for i in range(len(div) - 1)]) if len(div) > 1 else 0
+        return known + perp
 
     def call(self):
         price = round(self._evaluate(), 1)  # fundamental price

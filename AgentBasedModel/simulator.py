@@ -38,11 +38,11 @@ class Simulator:
             self.exchange.call()  # generate next dividends
 
             # Change behaviour
-            if not it % 20 and it > 0:
-                returns_std = std([mean(self.info.returns(trader, last=10)) for trader in self.traders])
+            if not it % 5 and it > 0:
+                returns_std = std([mean(self.info.returns(trader, last=5)) for trader in self.traders])
                 for trader in self.traders:
                     if type(trader) == Universalist:
-                        ab_returns = self.info.abnormal_returns(trader, last=10)
+                        ab_returns = self.info.abnormal_returns(trader, last=5)
                         if mean(ab_returns) / returns_std < random.normalvariate(0, 1):
                             trader.change()
 
