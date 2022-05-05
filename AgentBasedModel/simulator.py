@@ -24,7 +24,7 @@ class Simulator:
             # Interest payment
             trader.cash += trader.cash * self.exchange.risk_free  # allow risk-free loan
 
-    def simulate(self, n_iter) -> object:
+    def simulate(self, n_iter: int) -> object:
         for it in tqdm(range(n_iter), desc='Simulation'):
             # Capture current info
             self.info.capture()
@@ -37,14 +37,13 @@ class Simulator:
             self._payments()  # pay dividends
             self.exchange.call()  # generate next dividends
 
-            # # Change behaviour
-            # if not it % 5 and it > 0:
-            #     returns_std = std([mean(self.info.returns(trader, last=5)) for trader in self.traders])
-            #     for trader in self.traders:
-            #         if type(trader) == Universalist:
-            #             ab_returns = self.info.abnormal_returns(trader, last=5)
-            #             if mean(ab_returns) / returns_std < random.normalvariate(0, 1):
-            #                 trader.change()
+            # Change behaviour
+            for trader in self.traders:
+                if type(trader) == Universalist and len(self.info.returns) > 1:
+                    chart_frac = mean([tr.type == 'Chartist' for tr in self.traders])
+                    fund_frac = mean([tr.type == 'Fundamentalist' for tr in self.traders])
+                    R = mean(self.info.returns[-1].values())  # average return of traders
+                    trader.change(chart_frac, fund_frac, R)
 
         return self
 
@@ -139,22 +138,22 @@ class SimulatorInfo:
         self.returns.append({tr_id: (self.equities[-1][tr_id] - self.equities[-2][tr_id]) / self.equities[-2][tr_id]
                              for tr_id in self.traders.keys()}) if len(self.equities) > 1 else None
 
-    # Advanced Statistics
-    # def returns(self, trader=None, rolling: int = 1, last: int = None) -> list:
-    #     if last is None:  # if not need to return last n, determine starting index
-    #         last = len(self.equities) - 1
-    #
-    #     if trader is None:
-    #         eq = [mean(v.values()) for v in self.equities[-last + 1:]]
-    #     else:
-    #         eq = [v[trader.id] for v in self.equities[-last + 1:]]
-    #
-    #     r = [(eq[i] - eq[i-1]) / eq[i-1] for i in range(len(eq)) if i > 0]  # calculate returns
-    #     r_rolled = [mean(r[i-rolling:i]) for i in range(len(r) + 1) if i - rolling >= 0]  # apply rolling
-    #
-    #     return r_rolled
-    #
-    # def abnormal_returns(self, trader, rolling: int = 1, last: int = None) -> list:
-    #     tr_returns = self.returns(trader, rolling, last)
-    #     all_returns = self.returns(None, rolling, last)
-    #     return [tr_returns[i] - all_returns[i] for i in range(len(all_returns))]
+    """Advanced Statistics
+    def returns(self, trader=None, rolling: int = 1, last: int = None) -> list:
+        if last is None:  # if not need to return last n, determine starting index
+            last = len(self.equities) - 1
+
+        if trader is None:
+            eq = [mean(v.values()) for v in self.equities[-last + 1:]]
+        else:
+            eq = [v[trader.id] for v in self.equities[-last + 1:]]
+
+        r = [(eq[i] - eq[i-1]) / eq[i-1] for i in range(len(eq)) if i > 0]  # calculate returns
+        r_rolled = [mean(r[i-rolling:i]) for i in range(len(r) + 1) if i - rolling >= 0]  # apply rolling
+
+        return r_rolled
+
+    def abnormal_returns(self, trader, rolling: int = 1, last: int = None) -> list:
+        tr_returns = self.returns(trader, rolling, last)
+        all_returns = self.returns(None, rolling, last)
+        return [tr_returns[i] - all_returns[i] for i in range(len(all_returns))]"""

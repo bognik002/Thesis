@@ -1,4 +1,5 @@
 from AgentBasedModel.utils import Order, OrderList
+from AgentBasedModel.utils.math import exp
 import random
 
 
@@ -455,7 +456,7 @@ class Universalist(Fundamentalist, Chartist):
         self.type = 'Chartist' if random.random() > .5 else 'Fundamentalist'  # randomly decide type
         self.access = access  # next n dividend payments known (Fundamentalist)
         self.steps = steps  # number of steps to determine trend (Chartist)
-        self.history = list()  # historical prices of past n steps (Chartist)
+        self.history = list()  # historical prices of past n steps
 
     def call(self):
         """
@@ -465,10 +466,31 @@ class Universalist(Fundamentalist, Chartist):
             Chartist.call(self)
         elif self.type == 'Fundamentalist':
             Fundamentalist.call(self)
+            self.history.append(self.market.price())  # continue to write down
 
-    def change(self):
+    def change(self, chart_frac: float, fund_frac: float, R, u1: float = 1, u2: float = .2, a: float = .1, s: float = 2):
         """
         Change trader's type and hence trading strategy
         """
-        self.type = 'Chartist' if self.type == 'Fundamentalist' else 'Fundamentalist'
-        self.history = list()  # need to clear out (it may contain some irrelevant past info)
+        flag = False
+        # Calculating likelihood to change strategy
+        r = self._evaluate() - self.market.price()  # dividend return
+        dp = self.history[-1] - self.history[0] if len(self.history) > 1 else 0
+        pf = self._evaluate()  # fundamental price
+        p = self.market.price()  # market price
+
+        U1 = a * ((r + 1 / u2 * dp) / p - R - s * abs(pf - p) / p)
+        U2 = a * (R - (r + 1 / u2 * dp) / p - s * abs(pf - p) / p)
+
+        if self.type == 'Chartist':
+            prob = u2 * chart_frac * exp(U2)
+            if random.random() > prob:
+                flag = True
+        elif self.type == 'Fundamentalist':
+            prob = u2 * fund_frac * exp(-U2)
+            if random.random() > prob:
+                flag = True
+
+        if flag:
+            self.type = 'Chartist' if self.type == 'Fundamentalist' else 'Fundamentalist'
+            self.history = list()  # need to clear out (it may contain some irrelevant past info)

@@ -1,3 +1,6 @@
+from math import exp
+
+
 def mean(x: list):
     return sum(x) / len(x)
 
