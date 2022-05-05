@@ -220,13 +220,17 @@ class Random(Trader):
         self.type = 'Random'
 
     @staticmethod
+    def draw_delta(std: float or int = 2.5):
+        lamb = 1 / std
+        return random.expovariate(lamb)
+
+    @staticmethod
     def draw_price(order_type, spread: dict, std: float or int = 2.5) -> float:
         """
         Draw price for limit order of Noise Agent. The price is calculated as:
         1) 35% - within the spread - uniform distribution
         2) 65% - out of the spread - delta from best price is exponential distribution r.v.
         """
-        lamb = 1/std
         random_state = random.random()  # Determines IN spread OR OUT of spread
 
         # Within the spread
@@ -235,7 +239,7 @@ class Random(Trader):
 
         # Out of spread
         else:
-            delta = random.expovariate(lamb)
+            delta = Random.draw_delta(std)
             if order_type == 'bid':
                 return round(spread['bid'] - delta, 1)
             if order_type == 'ask':
@@ -427,12 +431,11 @@ class Chartist(Trader):
             random_state = random.random()  # whether bid or ask
             # Buy
             if random_state > .5:
-                price = Random.draw_price('bid', spread)
-                self._buy_limit(Random.draw_quantity('limit'), price)
+                self._buy_limit(Random.draw_quantity('limit'), spread['bid'] - Random.draw_delta())
             # Sell
             else:
                 price = Random.draw_price('ask', spread)
-                self._sell_limit(Random.draw_quantity('limit'), price)
+                self._sell_limit(Random.draw_quantity('limit'), spread['ask'] + Random.draw_delta())
 
 
 class Universalist(Fundamentalist, Chartist):
