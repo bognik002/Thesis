@@ -68,5 +68,8 @@ def plot_returns(info: SimulatorInfo, rolling: int = 1, figsize=(6, 6)):
     plt.title('Traders` mean return')
     plt.xlabel('Iterations')
     plt.ylabel('Mean Return')
-    plt.plot(info.returns(rolling=rolling), color='black')
+    values = [mean([mean(v.values()) for v in info.returns[i-rolling:i]])
+              for i in range(len(info.returns)) if i - rolling >= 0]
+    plt.plot(values, color='black')
+    plt.plot([5e-4] * len(values), color='black', ls='--', alpha=.8)
     plt.show()

@@ -220,13 +220,11 @@ class Random(Trader):
         self.type = 'Random'
 
     @staticmethod
-    def draw_price(order_type, spread: dict, std=5) -> float:
+    def draw_price(order_type, spread: dict, std: float or int = 2.5) -> float:
         """
         Draw price for limit order of Noise Agent. The price is calculated as:
         1) 35% - within the spread - uniform distribution
         2) 65% - out of the spread - delta from best price is exponential distribution r.v.
-
-        :return: price
         """
         lamb = 1/std
         random_state = random.random()  # Determines IN spread OR OUT of spread

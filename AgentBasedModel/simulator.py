@@ -37,14 +37,14 @@ class Simulator:
             self._payments()  # pay dividends
             self.exchange.call()  # generate next dividends
 
-            # Change behaviour
-            if not it % 5 and it > 0:
-                returns_std = std([mean(self.info.returns(trader, last=5)) for trader in self.traders])
-                for trader in self.traders:
-                    if type(trader) == Universalist:
-                        ab_returns = self.info.abnormal_returns(trader, last=5)
-                        if mean(ab_returns) / returns_std < random.normalvariate(0, 1):
-                            trader.change()
+            # # Change behaviour
+            # if not it % 5 and it > 0:
+            #     returns_std = std([mean(self.info.returns(trader, last=5)) for trader in self.traders])
+            #     for trader in self.traders:
+            #         if type(trader) == Universalist:
+            #             ab_returns = self.info.abnormal_returns(trader, last=5)
+            #             if mean(ab_returns) / returns_std < random.normalvariate(0, 1):
+            #                 trader.change()
 
         return self
 
@@ -69,6 +69,7 @@ class SimulatorInfo:
         self.cash = list()  # agent: cash
         self.assets = list()  # agent: number of assets
         self.types = list()  # agent: current type
+        self.returns = list()
 
         """
         # Market Statistics
@@ -87,9 +88,6 @@ class SimulatorInfo:
         self.assets_value = list()  # sum of value of assets of agents
         """
 
-    # todo как быть с разными аттрибутами разных типов агентов
-    # todo как быть с разными типами агентов, они динамические
-    # todo может рандомно инициализировать access, step, etc. в начале у Universalist, записывать их сразу?
     def capture(self):
         """
         Method called at the end of each iteration to capture basic info on simulation.
@@ -138,23 +136,25 @@ class SimulatorInfo:
         self.cash.append({t_id: t['link'].cash for t_id, t in self.traders.items()})
         self.assets.append({t_id: t['link'].assets for t_id, t in self.traders.items()})
         self.types.append({t_id: t['link'].type for t_id, t in self.traders.items()})
+        self.returns.append({tr_id: (self.equities[-1][tr_id] - self.equities[-2][tr_id]) / self.equities[-2][tr_id]
+                             for tr_id in self.traders.keys()}) if len(self.equities) > 1 else None
 
     # Advanced Statistics
-    def returns(self, trader=None, rolling: int = 1, last: int = None) -> list:
-        if last is None:  # if not need to return last n, determine starting index
-            last = len(self.equities) - 1
-
-        if trader is None:
-            eq = [mean(v.values()) for v in self.equities[-last + 1:]]
-        else:
-            eq = [v[trader.id] for v in self.equities[-last + 1:]]
-
-        r = [(eq[i] - eq[i-1]) / eq[i-1] for i in range(len(eq)) if i > 0]  # calculate returns
-        r_rolled = [mean(r[i-rolling:i]) for i in range(len(r) + 1) if i - rolling >= 0]  # apply rolling
-
-        return r_rolled
-
-    def abnormal_returns(self, trader, rolling: int = 1, last: int = None) -> list:
-        tr_returns = self.returns(trader, rolling, last)
-        all_returns = self.returns(None, rolling, last)
-        return [tr_returns[i] - all_returns[i] for i in range(len(all_returns))]
+    # def returns(self, trader=None, rolling: int = 1, last: int = None) -> list:
+    #     if last is None:  # if not need to return last n, determine starting index
+    #         last = len(self.equities) - 1
+    #
+    #     if trader is None:
+    #         eq = [mean(v.values()) for v in self.equities[-last + 1:]]
+    #     else:
+    #         eq = [v[trader.id] for v in self.equities[-last + 1:]]
+    #
+    #     r = [(eq[i] - eq[i-1]) / eq[i-1] for i in range(len(eq)) if i > 0]  # calculate returns
+    #     r_rolled = [mean(r[i-rolling:i]) for i in range(len(r) + 1) if i - rolling >= 0]  # apply rolling
+    #
+    #     return r_rolled
+    #
+    # def abnormal_returns(self, trader, rolling: int = 1, last: int = None) -> list:
+    #     tr_returns = self.returns(trader, rolling, last)
+    #     all_returns = self.returns(None, rolling, last)
+    #     return [tr_returns[i] - all_returns[i] for i in range(len(all_returns))]
