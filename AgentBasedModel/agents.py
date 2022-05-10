@@ -180,12 +180,12 @@ class Trader:
         return self.cash + self.assets * price
 
     def _buy_limit(self, quantity, price):
-        order = Order(price, quantity, 'bid', self)
+        order = Order(round(price, 1), quantity, 'bid', self)
         self.orders.append(order)
         self.market.limit_order(order)
 
     def _sell_limit(self, quantity, price):
-        order = Order(price, quantity, 'ask', self)
+        order = Order(round(price, 1), quantity, 'ask', self)
         self.orders.append(order)
         self.market.limit_order(order)
 
@@ -334,6 +334,12 @@ class Fundamentalist(Trader):
         price = round(self._evaluate(), 1)  # fundamental price
         spread = self.market.spread()
 
+        if spread is None:
+            return
+
+        price = round(self._evaluate(), 1)  # fundamental price
+        spread = self.market.spread()
+
         # Cancel all orders
         if len(self.orders) > 5:
             for order in self.orders:
@@ -345,20 +351,26 @@ class Fundamentalist(Trader):
             if random_state > .5:
                 self._buy_market(Random.draw_quantity('market'))
             else:
-                self._sell_limit(Random.draw_quantity('limit'), price + .1)
+                self._sell_limit(Random.draw_quantity('limit'), price + Random.draw_delta())
 
         elif price <= spread['bid']:
             if random_state > .5:
                 self._sell_market(Random.draw_quantity('market'))
             else:
-                self._buy_limit(Random.draw_quantity('limit'), price - .1)
+                self._buy_limit(Random.draw_quantity('limit'), price - Random.draw_delta())
 
         # Inside the spread
         elif spread['ask'] > price > spread['bid']:
             if random_state > .5:
-                self._buy_limit(Random.draw_quantity('limit'), price - .1)
+                self._buy_limit(Random.draw_quantity('limit'), price - Random.draw_delta())
             else:
-                self._sell_limit(Random.draw_quantity('limit'), price + .1)
+                self._sell_limit(Random.draw_quantity('limit'), price + Random.draw_delta())
+
+        # Cancel order
+        elif random_state > .95 or random_state < .05:
+            if self.orders:
+                order_n = random.randint(0, len(self.orders) - 1)
+                self._cancel_order(self.orders[order_n])
 
 
 class Chartist(Trader):
