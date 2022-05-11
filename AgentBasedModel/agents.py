@@ -247,22 +247,15 @@ class Random(Trader):
                 return round(spread['ask'] + delta, 1)
 
     @staticmethod
-    def draw_quantity(order_exec, a=1, b=5) -> float:
+    def draw_quantity(a=1, b=5) -> float:
         """
         Draw random quantity to buy from uniform distribution.
 
-        :param order_exec: 'market' or 'limit'
         :param a: minimal quantity
         :param b: maximal quantity
         :return: quantity for order
         """
-        # Market order
-        if order_exec == 'market':
-            return random.randint(a, b)
-
-        # Limit order
-        if order_exec == 'limit':
-            return random.randint(a, b)
+        return random.randint(a, b)
 
     def call(self):
         spread = self.market.spread()
@@ -279,7 +272,7 @@ class Random(Trader):
         random_state = random.random()
         # Market order
         if random_state > .85:
-            quantity = self.draw_quantity('market')
+            quantity = self.draw_quantity()
             if order_type == 'bid':
                 self._buy_market(quantity)
             elif order_type == 'ask':
@@ -288,7 +281,7 @@ class Random(Trader):
         # Limit order
         elif random_state > .5:
             price = self.draw_price(order_type, spread)
-            quantity = self.draw_quantity('limit')
+            quantity = self.draw_quantity()
             if order_type == 'bid':
                 self._buy_limit(quantity, price)
             elif order_type == 'ask':
@@ -330,47 +323,48 @@ class Fundamentalist(Trader):
         known = sum([div[i] / (1 + r)**(i + 1) for i in range(len(div) - 1)]) if len(div) > 1 else 0
         return known + perp
 
+    @staticmethod
+    def draw_quantity(pf, p, gamma: float = 10):
+        return round(gamma * 100 * abs(pf - p) / p * Random.draw_quantity())
+
     def call(self):
-        price = round(self._evaluate(), 1)  # fundamental price
+        pf = round(self._evaluate(), 1)  # fundamental price
+        p = self.market.price()
         spread = self.market.spread()
 
         if spread is None:
             return
 
-        price = round(self._evaluate(), 1)  # fundamental price
-        spread = self.market.spread()
+        random_state = random.random()
+        qty = Fundamentalist.draw_quantity(pf, p)  # quantity to buy
 
-        # Cancel all orders
-        if len(self.orders) > 5:
-            for order in self.orders:
-                self._cancel_order(order)
+        # Limit or Market order
+        if random_state > .45 and qty > 0:
+            random_state = random.random()
 
-        random_state = random.random()  # determine order type
+            if pf >= spread['ask']:
+                if random_state > .5:
+                    self._buy_market(qty)
+                else:
+                    self._sell_limit(qty, pf + Random.draw_delta())
 
-        if price >= spread['ask']:
-            if random_state > .5:
-                self._buy_market(Random.draw_quantity('market'))
-            else:
-                self._sell_limit(Random.draw_quantity('limit'), price + Random.draw_delta())
+            elif pf <= spread['bid']:
+                if random_state > .5:
+                    self._sell_market(qty)
+                else:
+                    self._buy_limit(qty, pf - Random.draw_delta())
 
-        elif price <= spread['bid']:
-            if random_state > .5:
-                self._sell_market(Random.draw_quantity('market'))
-            else:
-                self._buy_limit(Random.draw_quantity('limit'), price - Random.draw_delta())
-
-        # Inside the spread
-        elif spread['ask'] > price > spread['bid']:
-            if random_state > .5:
-                self._buy_limit(Random.draw_quantity('limit'), price - Random.draw_delta())
-            else:
-                self._sell_limit(Random.draw_quantity('limit'), price + Random.draw_delta())
+            # Inside the spread
+            elif spread['ask'] > pf > spread['bid']:
+                if random_state > .5:
+                    self._buy_limit(qty, pf - Random.draw_delta())
+                else:
+                    self._sell_limit(qty, pf + Random.draw_delta())
 
         # Cancel order
-        elif random_state > .95 or random_state < .05:
+        else:
             if self.orders:
-                order_n = random.randint(0, len(self.orders) - 1)
-                self._cancel_order(self.orders[order_n])
+                self._cancel_order(self.orders[0])
 
 
 class Chartist(Trader):
@@ -388,6 +382,7 @@ class Chartist(Trader):
         """
         super().__init__(market, cash, assets)
         self.type = 'Chartist'
+        self.sentiment = 'neutral'
         self.steps = steps  # number of steps to determine trend
         self.history = list()  # historical prices of past n steps
 
@@ -436,19 +431,19 @@ class Chartist(Trader):
         # Trend
         if trend_bool:
             if direction == 'upward':
-                self._buy_market(Random.draw_quantity('market'))
+                self._buy_market(Random.draw_quantity())
             elif direction == 'downward':
-                self._sell_market(Random.draw_quantity('market'))
+                self._sell_market(Random.draw_quantity())
         # No Trend
         else:
             random_state = random.random()  # whether bid or ask
             # Buy
             if random_state > .5:
-                self._buy_limit(Random.draw_quantity('limit'), spread['bid'] - Random.draw_delta())
+                self._buy_limit(Random.draw_quantity(), spread['bid'] - Random.draw_delta())
             # Sell
             else:
                 price = Random.draw_price('ask', spread)
-                self._sell_limit(Random.draw_quantity('limit'), spread['ask'] + Random.draw_delta())
+                self._sell_limit(Random.draw_quantity(), spread['ask'] + Random.draw_delta())
 
 
 class Universalist(Fundamentalist, Chartist):
