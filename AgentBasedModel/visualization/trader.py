@@ -63,13 +63,31 @@ def plot_types(info: SimulatorInfo, figsize=(6, 6)):
     plt.show()
 
 
-def plot_returns(info: SimulatorInfo, rolling: int = 1, figsize=(6, 6)):
+def plot_returns(info: SimulatorInfo, types=True, rolling: int = 1, figsize=(6, 6)):
     plt.figure(figsize=figsize)
     plt.title('Traders` mean return')
     plt.xlabel('Iterations')
     plt.ylabel('Mean Return')
-    values = [mean([mean(v.values()) for v in info.returns[i-rolling:i]])
-              for i in range(len(info.returns)) if i - rolling >= 0]
-    plt.plot(values, color='black')
-    plt.plot([5e-4] * len(values), color='black', ls='--', alpha=.8)
+    if not types:
+        values = [mean([mean(v.values()) for v in info.returns[i-rolling:i]])
+                  for i in range(len(info.returns)) if i - rolling >= 0]
+        plt.plot(values, color='black')
+    else:
+        for t in ['Random', 'Fundamentalist', 'Chartist']:
+            values = list()
+            for i in range(len(info.returns)):
+                if i - rolling >= 0:
+                    r_tmp = list()
+                    for j, v in enumerate(info.returns[i-rolling:i]):
+                        for tr_id, r in v.items():
+                            if info.types[i-rolling + j][tr_id] == t:
+                                r_tmp.append(r)
+                    if r_tmp:
+                        values.append(mean(r_tmp))
+
+            if values:
+                plt.plot(values, label=t)
+    plt.plot([info.exchange.risk_free] * len(values), color='black', ls='--', alpha=.8)
+    if types:
+        plt.legend()
     plt.show()

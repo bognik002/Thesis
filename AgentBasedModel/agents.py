@@ -24,14 +24,14 @@ class ExchangeAgent:
         self.order_book = {'bid': OrderList('bid'), 'ask': OrderList('ask')}
         self.dividend_book = list()  # list of future dividends
         self.risk_free = rf
-        self._fill_book(price, std, volume)
+        self._fill_book(price, std, volume, rf * price)
 
     def call(self):
         """
         Generate time series on future dividends.
         """
         # Generate future dividend
-        d = self.dividend_book[-1] + self._next_dividend()
+        d = self.dividend_book[-1] * self._next_dividend()
         self.dividend_book.append(max(d, 0))  # dividend > 0
         self.dividend_book.pop(0)
 
@@ -55,7 +55,7 @@ class ExchangeAgent:
         # Dividend book
         for i in range(20):
             self.dividend_book.append(max(div, 0))  # dividend > 0
-            div += self._next_dividend()
+            div *= self._next_dividend()
 
     def _clear_book(self):
         """
@@ -100,8 +100,8 @@ class ExchangeAgent:
         return self.dividend_book[len(self.dividend_book) - access:]
 
     @classmethod
-    def _next_dividend(cls, std=5e-5):
-        return random.normalvariate(0, std)
+    def _next_dividend(cls, std=5e-3):
+        return exp(random.normalvariate(0, std))
 
     def limit_order(self, order: Order):
         """
@@ -324,7 +324,7 @@ class Fundamentalist(Trader):
         return known + perp
 
     @staticmethod
-    def draw_quantity(pf, p, gamma: float = 10):
+    def draw_quantity(pf, p, gamma: float = 5):
         return round(gamma * 100 * abs(pf - p) / p * Random.draw_quantity())
 
     def call(self):
