@@ -1,5 +1,5 @@
 from AgentBasedModel.utils import Order, OrderList
-from AgentBasedModel.utils.math import exp
+from AgentBasedModel.utils.math import exp, mean
 import random
 
 
@@ -10,7 +10,7 @@ class ExchangeAgent:
     """
     id = 0
 
-    def __init__(self, price: float or int = 100, std: float or int = 5, volume: int = 2000, rf: float = 5e-4):
+    def __init__(self, price: float or int = 100, std: float or int = 25, volume: int = 2000, rf: float = 5e-4):
         """
         Initialization parameters
         :param price: stock initial price
@@ -324,7 +324,7 @@ class Fundamentalist(Trader):
         return known + perp
 
     @staticmethod
-    def draw_quantity(pf, p, gamma: float = 5):
+    def draw_quantity(pf, p, gamma: float = .3):
         return round(gamma * 100 * abs(pf - p) / p * Random.draw_quantity())
 
     def call(self):
@@ -389,8 +389,63 @@ class Chartist(Trader):
         If 'steps' consecutive steps of upward (downward) price movements -> buy (sell) market order. If there are no
         such trend, act as random trader placing only limit orders.
         """
+        random_state = random.random()
         if self.sentiment == 'optimistic':
+            # Market order
+            if random_state > .85:
+                self._buy_market(Random.draw_quantity())
+            # Limit order
+            elif random_state > .5:
+                self._buy_limit(Random.draw_quantity(), self.market.price() - Random.draw_delta())
+            # Cancel order
+            elif random_state < .35:
+                if self.orders:
+                    self._cancel_order(self.orders[-1])
+        elif self.sentiment == 'pessimistic':
+            # Market order
+            if random_state > .85:
+                self._sell_market(Random.draw_quantity())
+            # Limit order
+            elif random_state > .5:
+                self._sell_limit(Random.draw_quantity(), self.market.price() + Random.draw_delta())
+            # Cancel order
+            elif random_state < .35:
+                if self.orders:
+                    self._cancel_order(self.orders[-1])
 
+    def change(self, info, a1: float = 1, a2: float = 1, a3: float = 1, v1: float = 1, v2: float = 1, s: float = 1):
+        """
+        Change sentiment
+
+        :param info: SimulatorInfo
+        :param a1: importance of chartists opinion
+        :param a2: importance of current price changes
+        :param a3: importance of fundamentalist profit
+        :param v1: frequency of revaluation of opinion for sentiment
+        :param v2: frequency of revaluation of opinion for strategy
+        :param s: importance of fundamental value opportunities
+        """
+        n_traders = len(info.traders)  # number of all traders
+        n_chartists = sum([tr_type == 'Chartist' for tr_type in info.types[-1].values()])
+        n_optimistic = sum([tr_type == 'optimistic' for tr_type in info.sentiments[-1].values()])
+        n_pessimists = sum([tr_type == 'pessimistic' for tr_type in info.sentiments[-1].values()])
+
+        dp = info.prices[-1] - info.prices[-2] if len(info.prices) > 1 else 0  # price derivative
+        p = self.market.price()  # market price
+        x = (n_optimistic - n_pessimists) / n_chartists
+
+        U = a1 * x + a2 / v1 * dp / p
+        if self.sentiment == 'optimistic':
+            prob = v1 * n_chartists / n_traders * exp(U)
+            if prob > random.random():
+                self.sentiment = 'pessimistic'
+
+        elif self.sentiment == 'pessimistic':
+            prob = v1 * n_chartists / n_traders * exp(-U)
+            if prob > random.random():
+                self.sentiment = 'optimistic'
+
+        # print('sentiment', prob)
 
 
 class Universalist(Fundamentalist, Chartist):
@@ -423,46 +478,57 @@ class Universalist(Fundamentalist, Chartist):
             Fundamentalist.call(self)
             self.history.append(self.market.price())  # continue to write down
 
-    def change(self, chart_frac: float, fund_frac: float, opt_frac: float, pes_frac: float,
-               R, u1: float = 1, u2: float = .2, a: float = .1, s: float = 2):
+    def change(self, info, a1: float = 1, a2: float = 1, a3: float = 1, v1: float = .1, v2: float = .1, s: float = 1):
         """
-        Change trader's type and hence trading strategy
+        Change strategy or sentiment
+
+        :param info: SimulatorInfo
+        :param a1: importance of chartists opinion
+        :param a2: importance of current price changes
+        :param a3: importance of fundamentalist profit
+        :param v1: frequency of revaluation of opinion for sentiment
+        :param v2: frequency of revaluation of opinion for strategy
+        :param s: importance of fundamental value opportunities
         """
-        flag = False
-        # Calculating likelihood to change strategy
-        r = self._evaluate() - self.market.price()  # dividend return
-        dp = self.history[-1] - self.history[0] if len(self.history) > 1 else 0
-        pf = self._evaluate()  # fundamental price
+        # Gather variables
+        n_traders = len(info.traders)  # number of all traders
+        n_fundamentalists = sum([tr.type == 'Fundamentalist' for tr in info.traders.values()])
+        n_optimistic = sum([tr.sentiment == 'optimistic' for tr in info.traders.values() if tr.type == 'Chartist'])
+        n_pessimists = sum([tr.sentiment == 'pessimistic' for tr in info.traders.values() if tr.type == 'Chartist'])
+
+        dp = info.prices[-1] - info.prices[-2] if len(info.prices) > 1 else 0  # price derivative
         p = self.market.price()  # market price
+        pf = self._evaluate()  # fundamental price
+        r = self.market.dividend()  # dividend return
+        R = mean(info.returns[-1].values())  # average return in economy
 
-        x = opt_frac - pes_frac
+        # Change sentiment
+        if self.type == 'Chartist':
+            Chartist.change(self, info, a1, a2, a3, v1, v2, s)
 
-        U1 = a * x dp / p
+        # Change strategy
+        U1 = a3 * ((r + 1 / v2 * dp) / p - R - s * abs((pf - p) / p))
+        U2 = a3 * (R - (r + 1 / v2 * dp) / p - s * abs((pf - p) / p))
 
-        U21 = a * ((r + 1 / u2 * dp) / p - R - s * abs(pf - p) / p)
-        U12 = a * (R - (r + 1 / u2 * dp) / p - s * abs(pf - p) / p)
-
-        # Change Sentiment
         if self.type == 'Chartist':
             if self.sentiment == 'optimistic':
-                prob = u1 * chart_frac * exp(U1)
-                if random.random() > prob:
-                    self.sentiment = 'pessimistic'
+                prob = v2 * n_optimistic / n_traders * exp(U1)
+                if prob > random.random():
+                    self.type = 'Fundamentalist'
             elif self.sentiment == 'pessimistic':
-                prob = u1 * chart_frac * exp(-U1)
-                if random.random() > prob:
-                    self.sentiment == 'optimistic'
+                prob = v2 * n_pessimists / n_traders * exp(U2)
+                if prob > random.random():
+                    self.type = 'Fundamentalist'
 
-        # Change Strategy
-        if self.type == 'Chartist':
-            prob = u2 * chart_frac * exp(U2)
-            if random.random() > prob:
-                flag = True
         elif self.type == 'Fundamentalist':
-            prob = u2 * fund_frac * exp(-U2)
-            if random.random() > prob:
-                flag = True
+            prob = v2 * n_fundamentalists / n_traders * exp(-U1)
+            if prob > random.random() and self.sentiment == 'pessimistic':
+                self.type = 'Chartist'
+                self.sentiment = 'optimistic'
 
-        if flag:
-            self.type = 'Chartist' if self.type == 'Fundamentalist' else 'Fundamentalist'
-            self.history = list()  # need to clear out (it may contain some irrelevant past info)
+            prob = v2 * n_fundamentalists / n_traders * exp(-U2)
+            if prob > random.random() and self.sentiment == 'optimistic':
+                self.type = 'Chartist'
+                self.sentiment = 'pessimistic'
+
+        # print('strategy', prob)

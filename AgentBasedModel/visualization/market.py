@@ -28,6 +28,17 @@ def plot_price_fundamental(info: SimulatorInfo, spread=False, figsize=(6, 6)):
     plt.show()
 
 
+def plot_arbitrage(info: SimulatorInfo, figsize=(6, 6)):
+    plt.figure(figsize=figsize)
+    plt.title('Stock Market and Fundamental Price Difference')
+    plt.xlabel('Iterations')
+    plt.ylabel('Price')
+    market = info.prices
+    fundamental = [div / info.exchange.risk_free for div in info.dividends]
+    plt.plot([fundamental[i] - market[i] for i in range(len(market))], color='black')
+    plt.show()
+
+
 def plot_dividend(info: SimulatorInfo, figsize=(6, 6)):
     plt.figure(figsize=figsize)
     plt.title('Stock Dividend')

@@ -1,5 +1,5 @@
 from AgentBasedModel.simulator import SimulatorInfo
-from AgentBasedModel.utils.math import mean
+from AgentBasedModel.utils.math import mean, rolling
 import matplotlib.pyplot as plt
 
 
@@ -52,35 +52,54 @@ def plot_assets(info: SimulatorInfo, figsize=(6, 6)):
     plt.show()
 
 
-def plot_types(info: SimulatorInfo, figsize=(6, 6)):
+def plot_types(info: SimulatorInfo, figsize=(6, 6), roll=None):
     plt.figure(figsize=figsize)
     plt.title('Traders` types')
     plt.xlabel('Iterations')
     plt.ylabel('Number of traders')
     for tr_type in ['Random', 'Fundamentalist', 'Chartist']:
-        plt.plot([sum([t == tr_type for t in v.values()]) for v in info.types], label=tr_type)
+        values = [sum([t == tr_type for t in v.values()]) for v in info.types]
+        if values:
+            if roll:
+                values = rolling(values, roll)
+            plt.plot(values, label=tr_type)
     plt.legend()
     plt.show()
 
 
-def plot_returns(info: SimulatorInfo, types=True, rolling: int = 1, figsize=(6, 6)):
+def plot_sentiments(info: SimulatorInfo, figsize=(6, 6), roll=None):
+    plt.figure(figsize=figsize)
+    plt.title('Traders` sentiments')
+    plt.xlabel('Iterations')
+    plt.ylabel('Number of traders')
+    for sentiment in ['optimistic', 'pessimistic']:
+        values = [sum([s == sentiment for s in v.values()]) for v in info.sentiments]
+        if values:
+            if roll:
+                values = rolling(values, roll)
+            plt.plot(values, label=sentiment)
+    plt.legend()
+    plt.show()
+
+
+def plot_returns(info: SimulatorInfo, types=True, roll: int = 1, figsize=(6, 6)):
     plt.figure(figsize=figsize)
     plt.title('Traders` mean return')
     plt.xlabel('Iterations')
     plt.ylabel('Mean Return')
     if not types:
-        values = [mean([mean(v.values()) for v in info.returns[i-rolling:i]])
-                  for i in range(len(info.returns)) if i - rolling >= 0]
+        values = [mean([mean(v.values()) for v in info.returns[i-roll:i]])
+                  for i in range(len(info.returns)) if i - roll >= 0]
         plt.plot(values, color='black')
     else:
         for t in ['Random', 'Fundamentalist', 'Chartist']:
             values = list()
             for i in range(len(info.returns)):
-                if i - rolling >= 0:
+                if i - roll >= 0:
                     r_tmp = list()
-                    for j, v in enumerate(info.returns[i-rolling:i]):
+                    for j, v in enumerate(info.returns[i-roll:i]):
                         for tr_id, r in v.items():
-                            if info.types[i-rolling + j][tr_id] == t:
+                            if info.types[i-roll + j][tr_id] == t:
                                 r_tmp.append(r)
                     if r_tmp:
                         values.append(mean(r_tmp))

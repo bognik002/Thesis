@@ -12,3 +12,7 @@ def quantile(x: list, q=.5):
 def std(x: list):
     m = mean(x)
     return (sum([(i - m)**2 for i in x]) / len(x))**.5
+
+
+def rolling(x: list, n):
+    return [mean(x[i:i+n]) for i in range(len(x) - n)]
