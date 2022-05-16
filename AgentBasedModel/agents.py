@@ -382,68 +382,15 @@ class Chartist(Trader):
         """
         super().__init__(market, cash, assets)
         self.type = 'Chartist'
-        self.sentiment = 'neutral'
-        self.steps = steps  # number of steps to determine trend
-        self.history = list()  # historical prices of past n steps
-
-    def _trend(self, steps: int) -> (bool, str or None):
-        """
-        Check whether there is a price trend present. And return what kind of trend:
-        'upward' or 'downward'.
-
-        :param steps: number of steps in past to measure trend
-        :return: (True - trend or False - no trend, 'upward' or 'downward')
-        """
-        if len(self.history) > steps:
-            upward = list()
-            for i in range(steps):
-                upward.append(self.history[i] < self.history[i+1])
-
-            downward = list()
-            for i in range(steps):
-                downward.append(self.history[i] > self.history[i + 1])
-
-            if all(upward):  # upward trend
-                return True, 'upward'
-
-            if all(downward):  # downward trend
-                return True, 'downward'
-
-        return False, None  # no trend or not enough history
+        self.sentiment = 'optimistic' if random.random() > .5 else 'pessimistic'
 
     def call(self):
         """
         If 'steps' consecutive steps of upward (downward) price movements -> buy (sell) market order. If there are no
         such trend, act as random trader placing only limit orders.
         """
-        self.history.append(self.market.price())  # Append current price
-        if len(self.history) > self.steps + 1:  # Delete oldest price if too many
-            self.history.pop(0)
+        if self.sentiment == 'optimistic':
 
-        spread = self.market.spread()
-        trend_bool, direction = self._trend(self.steps)
-
-        # Cancel all orders
-        if len(self.orders) > 5:
-            for order in self.orders:
-                self._cancel_order(order)
-
-        # Trend
-        if trend_bool:
-            if direction == 'upward':
-                self._buy_market(Random.draw_quantity())
-            elif direction == 'downward':
-                self._sell_market(Random.draw_quantity())
-        # No Trend
-        else:
-            random_state = random.random()  # whether bid or ask
-            # Buy
-            if random_state > .5:
-                self._buy_limit(Random.draw_quantity(), spread['bid'] - Random.draw_delta())
-            # Sell
-            else:
-                price = Random.draw_price('ask', spread)
-                self._sell_limit(Random.draw_quantity(), spread['ask'] + Random.draw_delta())
 
 
 class Universalist(Fundamentalist, Chartist):
@@ -461,6 +408,7 @@ class Universalist(Fundamentalist, Chartist):
         """
         super().__init__(market, cash, assets)
         self.type = 'Chartist' if random.random() > .5 else 'Fundamentalist'  # randomly decide type
+        self.sentiment = 'optimistic' if random.random() > .5 else 'pessimistic'
         self.access = access  # next n dividend payments known (Fundamentalist)
         self.steps = steps  # number of steps to determine trend (Chartist)
         self.history = list()  # historical prices of past n steps
@@ -475,7 +423,8 @@ class Universalist(Fundamentalist, Chartist):
             Fundamentalist.call(self)
             self.history.append(self.market.price())  # continue to write down
 
-    def change(self, chart_frac: float, fund_frac: float, R, u1: float = 1, u2: float = .2, a: float = .1, s: float = 2):
+    def change(self, chart_frac: float, fund_frac: float, opt_frac: float, pes_frac: float,
+               R, u1: float = 1, u2: float = .2, a: float = .1, s: float = 2):
         """
         Change trader's type and hence trading strategy
         """
@@ -486,9 +435,25 @@ class Universalist(Fundamentalist, Chartist):
         pf = self._evaluate()  # fundamental price
         p = self.market.price()  # market price
 
-        U1 = a * ((r + 1 / u2 * dp) / p - R - s * abs(pf - p) / p)
-        U2 = a * (R - (r + 1 / u2 * dp) / p - s * abs(pf - p) / p)
+        x = opt_frac - pes_frac
 
+        U1 = a * x dp / p
+
+        U21 = a * ((r + 1 / u2 * dp) / p - R - s * abs(pf - p) / p)
+        U12 = a * (R - (r + 1 / u2 * dp) / p - s * abs(pf - p) / p)
+
+        # Change Sentiment
+        if self.type == 'Chartist':
+            if self.sentiment == 'optimistic':
+                prob = u1 * chart_frac * exp(U1)
+                if random.random() > prob:
+                    self.sentiment = 'pessimistic'
+            elif self.sentiment == 'pessimistic':
+                prob = u1 * chart_frac * exp(-U1)
+                if random.random() > prob:
+                    self.sentiment == 'optimistic'
+
+        # Change Strategy
         if self.type == 'Chartist':
             prob = u2 * chart_frac * exp(U2)
             if random.random() > prob:
