@@ -1,112 +1,121 @@
 from AgentBasedModel.simulator import SimulatorInfo
-from AgentBasedModel.utils.math import mean, rolling
+import AgentBasedModel.utils.math as math
 import matplotlib.pyplot as plt
 
 
-def plot_equity(info: SimulatorInfo, trader_type: str = None, figsize=(6, 6)):
+def plot_equity(info: SimulatorInfo, rolling: int = 1, figsize=(6, 6)):
     plt.figure(figsize=figsize)
-    plt.title('Traders` mean equity')
+    plt.title('Equity') if rolling == 1 else plt.title(f'Equity (MA {rolling})')
     plt.xlabel('Iterations')
     plt.ylabel('Mean Equity')
-    if trader_type is not None:
-        iterations = list()
-        values = list()
-        for i in range(len(info.types)):  # iterations
-            v = [eq for tr_id, eq in info.equities[i].items() if info.types[i][tr_id] == trader_type]
-            if v:
-                iterations.append(i)
-                values.append(mean(v))
 
-        plt.plot(iterations, values, label=trader_type, color='black')
-    else:
-        for trader_type in ['Random', 'Fundamentalist', 'Chartist']:
-            iterations = list()
-            values = list()
-            for i in range(len(info.types)):  # iterations
-                v = [eq for tr_id, eq in info.equities[i].items() if info.types[i][tr_id] == trader_type]
-                if v:
-                    iterations.append(i)
-                    values.append(mean(v))
-
-            plt.plot(iterations, values, label=trader_type)
+    labels = ['Random', 'Fundamentalist', 'Chartist']
+    data = math.aggregate(info.types, info.equities, labels)
+    for k, v in data.items():
+        if sum([_ is not None for _ in v]):
+            plt.plot(range(rolling, len(v)), math.rolling(v, rolling), label=k)
 
     plt.legend()
     plt.show()
 
 
-def plot_cash(info: SimulatorInfo, figsize=(6, 6)):
+def plot_cash(info: SimulatorInfo, rolling: int = 1, figsize=(6, 6)):
     plt.figure(figsize=figsize)
-    plt.title('Traders` mean cash')
+    plt.title('Cash') if rolling == 1 else plt.title(f'Cash (MA {rolling})')
     plt.xlabel('Iterations')
     plt.ylabel('Mean Cash')
-    plt.plot([mean(v.values()) for v in info.cash], color='black')
+
+    labels = ['Random', 'Fundamentalist', 'Chartist']
+    data = math.aggregate(info.types, info.cash, labels)
+    for k, v in data.items():
+        if sum([_ is not None for _ in v]):
+            plt.plot(range(rolling, len(v)), math.rolling(v, rolling), label=k)
+
+    plt.legend()
     plt.show()
 
 
-def plot_assets(info: SimulatorInfo, figsize=(6, 6)):
+def plot_assets(info: SimulatorInfo, rolling: int = 1, figsize=(6, 6)):
     plt.figure(figsize=figsize)
-    plt.title('Traders` mean assets')
+    plt.title('Assets') if rolling == 1 else plt.title(f'Assets (MA {rolling})')
     plt.xlabel('Iterations')
     plt.ylabel('Mean Assets')
-    plt.plot([mean(v.values()) for v in info.assets], color='black')
+
+    labels = ['Random', 'Fundamentalist', 'Chartist']
+    data = math.aggregate(info.types, info.assets, labels)
+    for k, v in data.items():
+        if sum([_ is not None for _ in v]):
+            plt.plot(range(rolling, len(v)), math.rolling(v, rolling), label=k)
+
+    plt.legend()
     plt.show()
 
 
-def plot_types(info: SimulatorInfo, figsize=(6, 6), roll=None):
+def plot_types(info: SimulatorInfo, rolling: int = 1, figsize=(6, 6)):
     plt.figure(figsize=figsize)
-    plt.title('Traders` types')
+    plt.title('Strategy') if rolling == 1 else plt.title(f'Strategy (MA {rolling})')
     plt.xlabel('Iterations')
     plt.ylabel('Number of traders')
+
     for tr_type in ['Random', 'Fundamentalist', 'Chartist']:
-        values = [sum([t == tr_type for t in v.values()]) for v in info.types]
-        if values:
-            if roll:
-                values = rolling(values, roll)
-            plt.plot(values, label=tr_type)
+        v = [sum([t == tr_type for t in v.values()]) for v in info.types]
+        plt.plot(range(rolling, len(v)), math.rolling(v, rolling), label=tr_type)
+
     plt.legend()
     plt.show()
 
 
-def plot_sentiments(info: SimulatorInfo, figsize=(6, 6), roll=None):
+def plot_types2(info: SimulatorInfo, rolling: int = 1, figsize=(6, 6)):
     plt.figure(figsize=figsize)
-    plt.title('Traders` sentiments')
+    plt.title('Strategy') if rolling == 1 else plt.title(f'Strategy (MA {rolling})')
+    plt.xlabel('Iterations')
+    plt.ylabel('Share of Chartists among Traders')
+
+    v = [sum([t == 'Chartist' for t in v.values()]) / len(v) for v in info.types]
+    plt.plot(range(rolling, len(v)), math.rolling(v, rolling), color='black')
+    plt.show()
+
+
+def plot_sentiments(info: SimulatorInfo, rolling: int = 1, figsize=(6, 6)):
+    plt.figure(figsize=figsize)
+    plt.title('Sentiment') if rolling == 1 else plt.title(f'Sentiment (MA {rolling})')
     plt.xlabel('Iterations')
     plt.ylabel('Number of traders')
-    for sentiment in ['optimistic', 'pessimistic']:
-        values = [sum([s == sentiment for s in v.values()]) for v in info.sentiments]
-        if values:
-            if roll:
-                values = rolling(values, roll)
-            plt.plot(values, label=sentiment)
+
+    for tr_type in ['Optimistic', 'Pessimistic']:
+        v = [sum([t == tr_type for t in v.values()]) for v in info.sentiments]
+        plt.plot(range(rolling, len(v)), math.rolling(v, rolling), label=tr_type)
+
     plt.legend()
     plt.show()
 
 
-def plot_returns(info: SimulatorInfo, types=True, roll: int = 1, figsize=(6, 6)):
+def plot_sentiments2(info: SimulatorInfo, rolling: int = 1, figsize=(6, 6)):
     plt.figure(figsize=figsize)
-    plt.title('Traders` mean return')
+    plt.title('Sentiment') if rolling == 1 else plt.title(f'Sentiment (MA {rolling})')
     plt.xlabel('Iterations')
-    plt.ylabel('Mean Return')
-    if not types:
-        values = [mean([mean(v.values()) for v in info.returns[i-roll:i]])
-                  for i in range(len(info.returns)) if i - roll >= 0]
-        plt.plot(values, color='black')
-    else:
-        for t in ['Random', 'Fundamentalist', 'Chartist']:
-            values = list()
-            for i in range(len(info.returns)):
-                if i - roll >= 0:
-                    r_tmp = list()
-                    for j, v in enumerate(info.returns[i-roll:i]):
-                        for tr_id, r in v.items():
-                            if info.types[i-roll + j][tr_id] == t:
-                                r_tmp.append(r)
-                    if r_tmp:
-                        values.append(mean(r_tmp))
+    plt.ylabel('Share of Pessimistic among chartists')
 
-            if values:
-                plt.plot(values, label=t)
-    plt.plot([info.exchange.risk_free] * len(values), color='black', ls='--', alpha=.8)
-    if types:
-        plt.legend()
+    v = [sum([t == 'Pessimistic' for t in v.values()]) / len(v) for v in info.sentiments]
+    plt.plot(range(rolling, len(v)), math.rolling(v, rolling), color='black')
+
+    plt.show()
+
+
+def plot_returns(info: SimulatorInfo, rolling: int = 1, figsize=(6, 6)):
+    plt.figure(figsize=figsize)
+    plt.title('Realized Returns') if rolling == 1 else plt.title(f'Realized Returns (MA {rolling})')
+    plt.xlabel('Iterations')
+    plt.ylabel('Mean Returns')
+
+    labels = ['Random', 'Fundamentalist', 'Chartist']
+    data = math.aggregate(info.types, info.returns, labels)
+    for k, v in data.items():
+        if sum([_ is not None for _ in v]):
+            plt.plot(range(rolling, len(v)), math.rolling(v, rolling), label=k)
+
+    plt.plot(range(rolling, (len(info.returns))), [info.exchange.risk_free] * (len(info.returns) - rolling),
+             ls='--', color='black', label='risk-free rate')
+
+    plt.legend()
     plt.show()

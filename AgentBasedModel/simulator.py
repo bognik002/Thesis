@@ -1,8 +1,5 @@
-import random
-
 from AgentBasedModel.agents import ExchangeAgent, Universalist, Chartist
-
-from AgentBasedModel.utils.math import *
+import random
 from tqdm import tqdm
 
 
@@ -39,8 +36,10 @@ class Simulator:
 
             # Change behaviour
             for trader in self.traders:
-                if type(trader) in (Universalist, Chartist):
-                    trader.change(self.info)
+                if type(trader) == Universalist:
+                    trader.change_strategy(self.info)
+                elif type(trader) == Chartist:
+                    trader.change_sentiment(self.info)
 
         return self
 
@@ -133,7 +132,6 @@ class SimulatorInfo:
         self.cash.append({t_id: t.cash for t_id, t in self.traders.items()})
         self.assets.append({t_id: t.assets for t_id, t in self.traders.items()})
         self.types.append({t_id: t.type for t_id, t in self.traders.items()})
-        self.sentiments.append({t_id: t.sentiment for t_id, t in self.traders.items()
-                                if t.type == 'Chartist'})
+        self.sentiments.append({t_id: t.sentiment for t_id, t in self.traders.items() if t.type == 'Chartist'})
         self.returns.append({tr_id: (self.equities[-1][tr_id] - self.equities[-2][tr_id]) / self.equities[-2][tr_id]
                              for tr_id in self.traders.keys()}) if len(self.equities) > 1 else None

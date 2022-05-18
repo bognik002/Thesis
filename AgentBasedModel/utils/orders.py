@@ -68,9 +68,8 @@ class Order:
         if self.order_type == 'ask':
             return self.price >= other.price
 
-    # todo reflect price and quantity as well
     def __str__(self) -> str:
-        return f'Order{self.order_id} {self.order_type}'
+        return f'{self.order_type} (price={self.price}, qty={self.qty})'
 
     def to_dict(self) -> dict:
         return {'price': self.price, 'qty': self.qty, 'order_type': self.order_type,

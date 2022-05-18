@@ -1,66 +1,75 @@
 from AgentBasedModel.simulator import SimulatorInfo
+import AgentBasedModel.utils.math as math
 import matplotlib.pyplot as plt
 
 
-def plot_price(info: SimulatorInfo, spread=False, figsize=(6, 6)):
+def plot_price(info: SimulatorInfo, spread=False, rolling: int = 1, figsize=(6, 6)):
     plt.figure(figsize=figsize)
-    plt.title('Stock Market Price')
+    plt.title('Stock Price') if rolling == 1 else plt.title(f'Stock Price (MA {rolling})')
     plt.xlabel('Iterations')
     plt.ylabel('Price')
-    plt.plot(info.prices, color='black')
+    plt.plot(range(rolling, len(info.prices)), math.rolling(info.prices, rolling), color='black')
     if spread:
-        plt.plot([el['bid'] for el in info.spreads], label='bid', color='green')
-        plt.plot([el['ask'] for el in info.spreads], label='ask', color='red')
+        v1 = [el['bid'] for el in info.spreads]
+        v2 = [el['ask'] for el in info.spreads]
+        plt.plot(range(rolling, len(v1)), math.rolling(v1, rolling), label='bid', color='green')
+        plt.plot(range(rolling, len(v2)), math.rolling(v2, rolling), label='ask', color='red')
     plt.show()
 
 
-def plot_price_fundamental(info: SimulatorInfo, spread=False, figsize=(6, 6)):
+def plot_price_fundamental(info: SimulatorInfo, spread=False, rolling: int = 1, figsize=(6, 6)):
     plt.figure(figsize=figsize)
-    plt.title('Stock Market and Fundamental Price')
+    if rolling == 1:
+        plt.title('Stock Fundamental and Market value')
+    else:
+        plt.title(f'Stock Fundamental and Market value (MA {rolling})')
     plt.xlabel('Iterations')
-    plt.ylabel('Price')
+    plt.ylabel('Present value')
     if spread:
-        plt.plot([el['bid'] for el in info.spreads], label='bid', color='green')
-        plt.plot([el['ask'] for el in info.spreads], label='ask', color='red')
-    plt.plot(info.prices, label='market value', color='black')
-    plt.plot([div / info.exchange.risk_free for div in info.dividends], label='fundamental value')
+        v1 = [el['bid'] for el in info.spreads]
+        v2 = [el['ask'] for el in info.spreads]
+        plt.plot(range(rolling, len(v1)), math.rolling(v1, rolling), label='bid', color='green')
+        plt.plot(range(rolling, len(v2)), math.rolling(v2, rolling), label='ask', color='red')
+    plt.plot(range(rolling, len(info.prices)), math.rolling(info.prices, rolling), label='market value', color='black')
+    plt.plot(range(rolling, len(info.prices)),
+             math.rolling([div / info.exchange.risk_free for div in info.dividends], rolling),
+             label='fundamental value')
     plt.legend()
     plt.show()
 
 
-def plot_arbitrage(info: SimulatorInfo, figsize=(6, 6)):
+def plot_arbitrage(info: SimulatorInfo, rolling: int = 1, figsize=(6, 6)):
     plt.figure(figsize=figsize)
-    plt.title('Stock Market and Fundamental Price Difference')
+    if rolling == 1:
+        plt.title('Stock Fundamental and Market value difference')
+    else:
+        plt.title(f'Stock Fundamental and Market value difference (MA {rolling})')
     plt.xlabel('Iterations')
-    plt.ylabel('Price')
+    plt.ylabel('Present value')
     market = info.prices
     fundamental = [div / info.exchange.risk_free for div in info.dividends]
-    plt.plot([fundamental[i] - market[i] for i in range(len(market))], color='black')
+    arbitrage = [fundamental[i] - market[i] for i in range(len(market))]
+    plt.plot(range(rolling, len(arbitrage)), math.rolling(arbitrage, rolling), color='black')
     plt.show()
 
 
-def plot_dividend(info: SimulatorInfo, figsize=(6, 6)):
+def plot_dividend(info: SimulatorInfo, rolling: int = 1, figsize=(6, 6)):
     plt.figure(figsize=figsize)
-    plt.title('Stock Dividend')
+    plt.title('Stock Dividend') if rolling == 1 else plt.title(f'Stock Dividend (MA {rolling})')
     plt.xlabel('Iterations')
     plt.ylabel('Dividend')
-    plt.plot(info.dividends, color='black')
+    plt.plot(range(rolling, len(info.dividends)), math.rolling(info.dividends, rolling), color='black')
     plt.show()
 
 
-def plot_orders(info: SimulatorInfo, stat: str = 'quantity', figsize=(6, 6)):
-    """
-    Plot statistic describing order book
-
-    :param info: SimulatorInfo object
-    :param stat: quantity, price mean, price std, volume sum, volume mean, volume std
-    :param figsize: figure sizes
-    """
+def plot_orders(info: SimulatorInfo, stat: str = 'quantity', rolling: int = 1, figsize=(6, 6)):
     plt.figure(figsize=figsize)
-    plt.title(f'Order book {stat}')
+    plt.title('Book Orders') if rolling == 1 else plt.title(f'Book Orders (MA {rolling})')
     plt.xlabel('Iterations')
     plt.ylabel(stat)
-    plt.plot([v[stat]['bid'] for v in info.orders], color='green', label='bid')
-    plt.plot([v[stat]['ask'] for v in info.orders], color='red', label='ask')
+    v1 = [v[stat]['bid'] for v in info.orders]
+    v2 = [v[stat]['ask'] for v in info.orders]
+    plt.plot(range(rolling, len(v1)), math.rolling(v1, rolling), label='bid', color='green')
+    plt.plot(range(rolling, len(v2)), math.rolling(v2, rolling), label='ask', color='red')
     plt.legend()
     plt.show()
