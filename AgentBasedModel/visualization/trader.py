@@ -111,8 +111,10 @@ def plot_returns(info: SimulatorInfo, rolling: int = 1, figsize=(6, 6)):
     labels = ['Random', 'Fundamentalist', 'Chartist']
     data = math.aggregate(info.types, info.returns, labels)
     for k, v in data.items():
-        if sum([_ is not None for _ in v]):
+        try:
             plt.plot(range(rolling, len(v)), math.rolling(v, rolling), label=k)
+        except:
+            plt.plot(v, label=k)
 
     plt.plot(range(rolling, (len(info.returns))), [info.exchange.risk_free] * (len(info.returns) - rolling),
              ls='--', color='black', label='risk-free rate')

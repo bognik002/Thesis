@@ -214,7 +214,7 @@ class Trader:
 
 class Random(Trader):
     """
-    Random perform action on call. Creates noisy orders to recreate trading in real environment.
+    Random creates noisy orders to recreate trading in real environment.
     """
     def __init__(self, market: ExchangeAgent, cash: float or int, assets: int = 0):
         super().__init__(market, cash, assets)
@@ -472,7 +472,7 @@ class Universalist(Fundamentalist, Chartist):
         elif self.type == 'Fundamentalist':
             Fundamentalist.call(self)
 
-    def change_strategy(self, info, a1=1., a2=1., a3=1., v1=.1, v2=.1, s=1.):
+    def change_strategy(self, info, a1=1., a2=1., a3=1, v1=.1, v2=.1, s=1.):
         """
         Change strategy or sentiment
 
@@ -524,3 +524,47 @@ class Universalist(Fundamentalist, Chartist):
             if prob > random.random() and self.sentiment == 'Optimistic':
                 self.type = 'Chartist'
                 self.sentiment = 'Pessimistic'
+
+
+class MarketMaker(Trader):
+    """
+    MarketMaker creates limit orders on both sides of the spread trying to gain on
+    spread between bid and ask prices, and maintain its assets to cash ratio in balance.
+    """
+
+    def __init__(self, market: ExchangeAgent, cash: float, assets: int = 500, upper_limit: float = 900,
+                 lower_limit: float = 100):
+        super().__init__(market, cash, assets)
+        self.type = 'Market Maker'
+        self.ul = upper_limit
+        self.ll = lower_limit
+        self.panic = False
+
+    def call(self):
+        # Clear previous orders
+        for order in self.orders.copy():
+            self._cancel_order(order)
+
+        spread = self.market.spread()
+        price = self.market.price()
+
+        # Calculate bid and ask volume
+        bid_volume = round(max(0., (self.ul - 1 - self.assets) / 2))
+        ask_volume = round(max(0., (self.assets - self.ll - 1) / 2))
+
+        # If in panic state we only either sell or buy commodities
+        if not bid_volume or not ask_volume:
+            self.panic = True
+        else:
+            self.panic = False
+
+        # todo надо решить мы будем продавать в панике рыночными заявками или нет
+        # if self.panic:
+        #     self._buy_market(bid_volume // 2) if bid_volume else None
+        #     self._sell_market(ask_volume // 2) if ask_volume else None
+        #
+        # else:
+        # todo понять надо отступ делать от спреда или от среднего
+        base_offset = min((spread['ask'] - spread['bid']) * (self.assets / self.ul), 1)  # Price offset
+        self._buy_limit(bid_volume, price - base_offset)  # BID
+        self._sell_limit(ask_volume, price + base_offset)  # ASK

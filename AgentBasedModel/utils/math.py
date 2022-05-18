@@ -29,7 +29,8 @@ def aggregate(types_arr: list, target_arr: list, labels):
     for it in range(len(target_arr)):
         tmp = {tr_str: list() for tr_str in labels}
         for tr_id in target_arr[it].keys():
-            tmp[types_arr[it][tr_id]].append(target_arr[it][tr_id])
+            if types_arr[it][tr_id] in labels:
+                tmp[types_arr[it][tr_id]].append(target_arr[it][tr_id])
         for k, v in tmp.items():
             if v:
                 v = mean(v)
