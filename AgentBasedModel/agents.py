@@ -375,12 +375,11 @@ class Chartist(Trader):
     buys stock or sells. Sentiment revaluation happens at the end of each iteration based on opinion
     propagation among other chartists, current price changes.
     """
-    def __init__(self, market: ExchangeAgent, cash: float or int, assets: int = 0, steps: int = 3):
+    def __init__(self, market: ExchangeAgent, cash: float or int, assets: int = 0):
         """
         :param market: exchange agent link
         :param cash: number of cash
         :param assets: number of assets
-        :param steps: number of iterations to determine trend
         """
         super().__init__(market, cash, assets)
         self.type = 'Chartist'
@@ -452,13 +451,12 @@ class Universalist(Fundamentalist, Chartist):
     Universalist mixes Fundamentalist, Chartist trading strategies, and allows to change from
     one strategy to another.
     """
-    def __init__(self, market: ExchangeAgent, cash: float or int, assets: int = 0, access: int = 1, steps: int = 3):
+    def __init__(self, market: ExchangeAgent, cash: float or int, assets: int = 0, access: int = 1):
         """
         :param market: exchange agent link
         :param cash: number of cash
         :param assets: number of assets
         :param access: number of future dividends informed
-        :param steps: number of iterations to determine trend
         """
         super().__init__(market, cash, assets)
         self.type = 'Chartist' if random.random() > .5 else 'Fundamentalist'  # randomly decide type
