@@ -94,7 +94,7 @@ def plot_sentiments2(info: SimulatorInfo, rolling: int = 1, figsize=(6, 6)):
     plt.figure(figsize=figsize)
     plt.title('Sentiment') if rolling == 1 else plt.title(f'Sentiment (MA {rolling})')
     plt.xlabel('Iterations')
-    plt.ylabel('Share of Pessimistic among chartists')
+    plt.ylabel('Share of Pessimistic among Chartists')
 
     v = [sum([t == 'Pessimistic' for t in v.values()]) / len(v) for v in info.sentiments]
     plt.plot(range(rolling, len(v)), math.rolling(v, rolling), color='black')

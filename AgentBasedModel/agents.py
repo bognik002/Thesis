@@ -10,7 +10,7 @@ class ExchangeAgent:
     """
     id = 0
 
-    def __init__(self, price: float or int = 100, std: float or int = 25, volume: int = 2000, rf: float = 5e-4):
+    def __init__(self, price: float or int = 100, std: float or int = 25, volume: int = 1000, rf: float = 5e-4):
         """
         Initialization parameters
         :param price: stock initial price
@@ -26,7 +26,7 @@ class ExchangeAgent:
         self.risk_free = rf
         self._fill_book(price, std, volume, rf * price)
 
-    def call(self):
+    def generate_dividend(self):
         """
         Generate time series on future dividends.
         """
@@ -53,7 +53,7 @@ class ExchangeAgent:
                 self.order_book['bid'].push(order)
 
         # Dividend book
-        for i in range(20):
+        for i in range(100):
             self.dividend_book.append(max(div, 0))  # dividend > 0
             div *= self._next_dividend()
 
@@ -87,7 +87,7 @@ class ExchangeAgent:
     def price(self) -> float or None:
         spread = self.spread()
         if spread:
-            return (spread['bid'] + spread['ask']) / 2
+            return round((spread['bid'] + spread['ask']) / 2, 1)
         raise Exception(f'Price cannot be determined, since no orders either bid or ask')
 
     def dividend(self, access: int = None) -> list or float:
@@ -97,7 +97,7 @@ class ExchangeAgent:
         """
         if access is None:
             return self.dividend_book[0]
-        return self.dividend_book[len(self.dividend_book) - access:]
+        return self.dividend_book[:access]
 
     @classmethod
     def _next_dividend(cls, std=5e-3):
@@ -325,8 +325,9 @@ class Fundamentalist(Trader):
         return known + perp
 
     @staticmethod
-    def draw_quantity(pf, p, gamma: float = 1):
-        return min(max(1, round(gamma * 100 * abs(pf - p) / p * Random.draw_quantity())), 10)
+    def draw_quantity(pf, p, gamma: float = 5e-3):
+        q = round(abs(pf - p) / p / gamma)
+        return min(q, 5)
 
     def call(self):
         pf = round(self.evaluate(self.market.dividend(self.access), self.market.risk_free), 1)  # fundamental price
@@ -338,6 +339,8 @@ class Fundamentalist(Trader):
 
         random_state = random.random()
         qty = Fundamentalist.draw_quantity(pf, p)  # quantity to buy
+        if not qty:
+            return
 
         # Limit or Market order
         if random_state > .45 and qty > 0:
@@ -472,7 +475,7 @@ class Universalist(Fundamentalist, Chartist):
         elif self.type == 'Fundamentalist':
             Fundamentalist.call(self)
 
-    def change_strategy(self, info, a1=1., a2=1., a3=1, v1=.1, v2=.1, s=1.):
+    def change_strategy(self, info, a1=.05, a2=.05, a3=.05, v1=1, v2=1, s=1):
         """
         Change strategy or sentiment
 

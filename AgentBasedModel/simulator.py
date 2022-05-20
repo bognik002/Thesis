@@ -1,4 +1,4 @@
-from AgentBasedModel.agents import ExchangeAgent, Universalist, Chartist
+from AgentBasedModel.agents import ExchangeAgent, Universalist, Chartist, Fundamentalist
 import random
 from tqdm import tqdm
 
@@ -7,10 +7,9 @@ class Simulator:
     """
     Simulator is responsible for launching agents' actions and executing scenarios
     """
-    def __init__(self, exchange: ExchangeAgent = None, traders: list = None):
-        random.shuffle(traders)
-
+    def __init__(self, exchange: ExchangeAgent = None, traders: list = None, events: list = None):
         self.exchange = exchange
+        self.events = [event.link(self) for event in events] if events else None  # link all events to simulator
         self.traders = traders
         self.info = SimulatorInfo(self.exchange, self.traders)  # links to existing objects
 
@@ -26,13 +25,19 @@ class Simulator:
             # Capture current info
             self.info.capture()
 
+            # Call scenario
+            if self.events:
+                for event in self.events:
+                    event.call(it)
+
             # Call Traders
+            random.shuffle(self.traders)
             for trader in self.traders:
                 trader.call()
 
             # Payments and dividends
             self._payments()  # pay dividends
-            self.exchange.call()  # generate next dividends
+            self.exchange.generate_dividend()  # generate next dividends
 
             # Change behaviour
             for trader in self.traders:
