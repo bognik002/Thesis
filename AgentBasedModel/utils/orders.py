@@ -216,7 +216,7 @@ class OrderList:
         # Insert to the end
         self.append(order)
 
-    def fulfill(self, order: Order) -> Order:
+    def fulfill(self, order: Order, t_cost: float) -> Order:
         if order.order_type == self.order_type:
             raise ValueError(f'Wrong order type! OrderList: {self.order_type}, Order: {order.order_type}')
 
@@ -235,18 +235,18 @@ class OrderList:
             # Solve cash and assets
             if order.order_type == 'bid':
                 if order.trader is not None:
-                    order.trader.cash -= tmp_price * tmp_qty
+                    order.trader.cash -= tmp_price * tmp_qty * (1 + t_cost)
                     order.trader.assets += tmp_qty
                 if val.trader is not None:
-                    val.trader.cash += tmp_price * tmp_qty
+                    val.trader.cash += tmp_price * tmp_qty * (1 - t_cost)
                     val.trader.assets -= tmp_qty
 
             if order.order_type == 'ask':
                 if order.trader is not None:
-                    order.trader.cash += tmp_price * tmp_qty
+                    order.trader.cash += tmp_price * tmp_qty * (1 - t_cost)
                     order.trader.assets -= tmp_qty
                 if val.trader is not None:
-                    val.trader.cash -= tmp_price * tmp_qty
+                    val.trader.cash -= tmp_price * tmp_qty * (1 + t_cost)
                     val.trader.assets += tmp_qty
 
             # Clear remaining

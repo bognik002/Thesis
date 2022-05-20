@@ -1,5 +1,5 @@
 from AgentBasedModel.utils import Order, OrderList
-from AgentBasedModel.utils.math import exp, mean
+from AgentBasedModel.utils.math import exp, mean, std
 import random
 
 
@@ -10,13 +10,15 @@ class ExchangeAgent:
     """
     id = 0
 
-    def __init__(self, price: float or int = 100, std: float or int = 25, volume: int = 1000, rf: float = 5e-4):
+    def __init__(self, price: float or int = 100, std: float or int = 25, volume: int = 1000, rf: float = 5e-4,
+                 transaction_cost: float = 0):
         """
         Initialization parameters
         :param price: stock initial price
         :param std: standard deviation of order prices in book
         :param volume: number of orders in book
         :param rf: risk-free rate (interest rate for cash holdings of agents)
+        :param transaction_cost: cost that is paid on each successful deal
         """
         self.name = f'ExchangeAgent{self.id}'
         ExchangeAgent.id += 1
@@ -24,6 +26,7 @@ class ExchangeAgent:
         self.order_book = {'bid': OrderList('bid'), 'ask': OrderList('ask')}
         self.dividend_book = list()  # list of future dividends
         self.risk_free = rf
+        self.transaction_cost = transaction_cost
         self._fill_book(price, std, volume, rf * price)
 
     def generate_dividend(self):
@@ -110,19 +113,20 @@ class ExchangeAgent:
         :return: void
         """
         bid, ask = self.spread().values()
+        t_cost = self.transaction_cost
         if not bid or not ask:
             return
 
         if order.order_type == 'bid':
             if order.price >= ask:
-                order = self.order_book['ask'].fulfill(order)
+                order = self.order_book['ask'].fulfill(order, t_cost)
             if order.qty > 0:
                 self.order_book['bid'].insert(order)
             return
 
         elif order.order_type == 'ask':
             if order.price <= bid:
-                order = self.order_book['bid'].fulfill(order)
+                order = self.order_book['bid'].fulfill(order, t_cost)
             if order.qty > 0:
                 self.order_book['ask'].insert(order)
 
@@ -132,10 +136,11 @@ class ExchangeAgent:
 
         :return: Order
         """
+        t_cost = self.transaction_cost
         if order.order_type == 'bid':
-            order = self.order_book['ask'].fulfill(order)
+            order = self.order_book['ask'].fulfill(order, t_cost)
         elif order.order_type == 'ask':
-            order = self.order_book['bid'].fulfill(order)
+            order = self.order_book['bid'].fulfill(order, t_cost)
         return order
 
     def cancel_order(self, order: Order):
@@ -325,7 +330,7 @@ class Fundamentalist(Trader):
         return known + perp
 
     @staticmethod
-    def draw_quantity(pf, p, gamma: float = 5e-3):
+    def draw_quantity(pf, p, t, gamma: float = 5e-3):
         q = round(abs(pf - p) / p / gamma)
         return min(q, 5)
 
@@ -333,37 +338,40 @@ class Fundamentalist(Trader):
         pf = round(self.evaluate(self.market.dividend(self.access), self.market.risk_free), 1)  # fundamental price
         p = self.market.price()
         spread = self.market.spread()
+        t_cost = self.market.transaction_cost
 
         if spread is None:
             return
 
         random_state = random.random()
-        qty = Fundamentalist.draw_quantity(pf, p)  # quantity to buy
+        qty = Fundamentalist.draw_quantity(pf, p, t_cost)  # quantity to buy
         if not qty:
             return
 
         # Limit or Market order
-        if random_state > .45 and qty > 0:
+        if random_state > .45:
             random_state = random.random()
 
-            if pf >= spread['ask']:
+            ask_t = round(spread['ask'] * (1 + t_cost), 1)
+            bid_t = round(spread['bid'] * (1 - t_cost), 1)
+
+            if pf >= ask_t:
                 if random_state > .5:
                     self._buy_market(qty)
                 else:
-                    self._sell_limit(qty, pf + Random.draw_delta())
+                    self._sell_limit(qty, (pf + Random.draw_delta()) * (1 + t_cost))
 
-            elif pf <= spread['bid']:
+            elif pf <= bid_t:
                 if random_state > .5:
                     self._sell_market(qty)
                 else:
-                    self._buy_limit(qty, pf - Random.draw_delta())
+                    self._buy_limit(qty, (pf - Random.draw_delta()) * (1 - t_cost))
 
-            # Inside the spread
-            elif spread['ask'] > pf > spread['bid']:
+            elif ask_t > pf > bid_t:
                 if random_state > .5:
-                    self._buy_limit(qty, pf - Random.draw_delta())
+                    self._buy_limit(qty, (pf - Random.draw_delta()) * (1 - t_cost))
                 else:
-                    self._sell_limit(qty, pf + Random.draw_delta())
+                    self._sell_limit(qty, (pf + Random.draw_delta()) * (1 + t_cost))
 
         # Cancel order
         else:

@@ -67,3 +67,6 @@ class MarketMakerOut(Event):
             return
 
         self.simulator.traders = [tr for tr in self.simulator.traders if type(tr) != MarketMaker]
+
+
+
