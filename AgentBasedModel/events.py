@@ -69,4 +69,13 @@ class MarketMakerOut(Event):
         self.simulator.traders = [tr for tr in self.simulator.traders if type(tr) != MarketMaker]
 
 
+class TransactionCost(Event):
+    def __init__(self, it, cost):
+        super().__init__(it)
+        self.cost = cost
 
+    def call(self, it: int):
+        if super().call(it):
+            return
+
+        self.simulator.exchange.transaction_cost = self.cost
