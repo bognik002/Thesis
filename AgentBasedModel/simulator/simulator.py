@@ -1,4 +1,4 @@
-from AgentBasedModel.agents import ExchangeAgent, Universalist, Chartist, Fundamentalist
+from AgentBasedModel.agents import ExchangeAgent, Universalist, Chartist
 import random
 from tqdm import tqdm
 

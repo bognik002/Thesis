@@ -23,6 +23,9 @@ class PriceShock(Event):
         super().__init__(it)
         self.dp = price_change
 
+    def __repr__(self):
+        return f'Price shock (it={self.it}, dp={self.dp})'
+
     def call(self, it: int):
         if super().call(it):
             return
@@ -37,6 +40,9 @@ class InformationShock(Event):
         super().__init__(it)
         self.access = access
 
+    def __repr__(self):
+        return f'Information shock (it={self.it}, access={self.access})'
+
     def call(self, it: int):
         if super().call(it):
             return
@@ -50,6 +56,9 @@ class MarketMakerIn(Event):
         super().__init__(it)
         self.cash = cash
 
+    def __repr__(self):
+        return f'MarketMaker In (it={self.it}, cash={self.cash})'
+
     def call(self, it: int):
         if super().call(it):
             return
@@ -62,6 +71,9 @@ class MarketMakerOut(Event):
     def __init__(self, it):
         super().__init__(it)
 
+    def __repr__(self):
+        return f'MarketMaker Out (it={self.it})'
+
     def call(self, it: int):
         if super().call(it):
             return
@@ -73,6 +85,9 @@ class TransactionCost(Event):
     def __init__(self, it, cost):
         super().__init__(it)
         self.cost = cost
+
+    def __repr__(self):
+        return f'Transaction cost (it={self.it}, cost={self.cost}%)'
 
     def call(self, it: int):
         if super().call(it):

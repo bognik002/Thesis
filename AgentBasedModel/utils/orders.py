@@ -68,7 +68,7 @@ class Order:
         if self.order_type == 'ask':
             return self.price >= other.price
 
-    def __str__(self) -> str:
+    def __repr__(self) -> str:
         return f'{self.order_type} (price={self.price}, qty={self.qty})'
 
     def to_dict(self) -> dict:
