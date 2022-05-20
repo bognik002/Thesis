@@ -1,5 +1,5 @@
 from AgentBasedModel.utils import Order, OrderList
-from AgentBasedModel.utils.math import exp, mean, std
+from AgentBasedModel.utils.math import exp, mean
 import random
 
 
@@ -330,7 +330,7 @@ class Fundamentalist(Trader):
         return known + perp
 
     @staticmethod
-    def draw_quantity(pf, p, t, gamma: float = 5e-3):
+    def draw_quantity(pf, p, gamma: float = 5e-3):
         q = round(abs(pf - p) / p / gamma)
         return min(q, 5)
 
@@ -344,7 +344,7 @@ class Fundamentalist(Trader):
             return
 
         random_state = random.random()
-        qty = Fundamentalist.draw_quantity(pf, p, t_cost)  # quantity to buy
+        qty = Fundamentalist.draw_quantity(pf, p)  # quantity to buy
         if not qty:
             return
 
