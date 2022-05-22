@@ -1,20 +1,20 @@
 from math import exp
 
 
-def mean(x: list):
+def mean(x: list) -> float:
     return sum(x) / len(x)
 
 
-def quantile(x: list, q=.5):
+def quantile(x: list, q=.5) -> float:
     return sorted(x)[round(len(x) * q) - 1]
 
 
-def std(x: list):
+def std(x: list) -> float:
     m = mean(x)
     return (sum([(i - m)**2 for i in x]) / len(x))**.5
 
 
-def rolling(x: list, n):
+def rolling(x: list, n) -> list:
     if None not in x:
         return [mean(x[i:i+n]) for i in range(len(x) - n)]
     else:
@@ -24,7 +24,11 @@ def rolling(x: list, n):
             res.append(mean(xs)) if xs else res.append(None)
 
 
-def aggregate(types_arr: list, target_arr: list, labels):
+def difference(x: list) -> list:
+    return [x[i+1] - x[i] for i in range(len(x) - 1)]
+
+
+def aggregate(types_arr: list, target_arr: list, labels) -> dict:
     data = {tr_str: list() for tr_str in labels}
     for it in range(len(target_arr)):
         tmp = {tr_str: list() for tr_str in labels}

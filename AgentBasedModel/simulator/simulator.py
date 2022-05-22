@@ -1,4 +1,5 @@
-from AgentBasedModel.agents import ExchangeAgent, Universalist, Chartist
+from AgentBasedModel.agents import ExchangeAgent, Universalist, Chartist, Fundamentalist
+from AgentBasedModel.utils.math import mean, std, difference, rolling
 import random
 from tqdm import tqdm
 
@@ -140,3 +141,49 @@ class SimulatorInfo:
         self.sentiments.append({t_id: t.sentiment for t_id, t in self.traders.items() if t.type == 'Chartist'})
         self.returns.append({tr_id: (self.equities[-1][tr_id] - self.equities[-2][tr_id]) / self.equities[-2][tr_id]
                              for tr_id in self.traders.keys()}) if len(self.equities) > 1 else None
+
+    def fundamental_value(self, access: int = 1) -> list:
+        divs = self.dividends.copy()
+        n = len(divs)  # number of iterations
+        divs.extend(self.exchange.dividend(access)[1:access])  # add not recorded future divs
+        r = self.exchange.risk_free
+
+        return [Fundamentalist.evaluate(divs[i:i+access], r) for i in range(n)]
+
+    def stock_returns(self) -> list:
+        p = self.prices
+        div = self.dividends
+        return [(p[i+1] - p[i]) / p[i] + div[i] / p[i] for i in range(len(p) - 1)]
+
+    def abnormal_returns(self) -> list:
+        rf = self.exchange.risk_free
+        return [r - rf for r in self.stock_returns()]
+
+    def return_volatility(self, window: int = None) -> list or float:
+        if window is None:
+            return std(self.stock_returns())
+        n = len(self.stock_returns())
+        return [std(self.stock_returns()[i:i+window]) for i in range(n - window)]
+
+    def price_volatility(self, window: int = None) -> list or float:
+        if window is None:
+            return std(self.prices)
+        return [std(self.prices[i:i+window]) for i in range(len(self.prices) - window)]
+
+    def sharpe_ratio(self, window: int = None) -> list or float:
+        if window is None:
+            return mean(self.abnormal_returns()) / self.return_volatility()
+        ab_returns = rolling(self.abnormal_returns(), window)
+        volatility = self.return_volatility(window)
+        return [ab_returns[i] / volatility[i] for i in range(len(ab_returns))]
+
+    def arbitrage(self, access: int = 1, window: int = None) -> list or float:
+        if window is None:
+            market = self.prices
+            fundamental = self.fundamental_value(access)
+            n = len(market)
+            return mean([abs(market[i] - fundamental[i]) / market[i] for i in range(n)])
+        market = rolling(self.prices, window)
+        fundamental = rolling(self.fundamental_value(access), window)
+        n = len(market)
+        return [abs(market[i] - fundamental[i]) / market[i] for i in range(n)]

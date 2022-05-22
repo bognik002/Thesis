@@ -1,15 +1,14 @@
-from AgentBasedModel.agents import ExchangeAgent, Random, Fundamentalist, Chartist, Universalist
-from AgentBasedModel.simulator import Simulator
-from AgentBasedModel.visualization import *
+from AgentBasedModel import *
+import matplotlib.pyplot as plt
 
 
-exchange = ExchangeAgent(volume=2000)
+exchange = ExchangeAgent(volume=1000)
 simulator = Simulator(**{
     'exchange': exchange,
-    'traders': [Random(exchange, 2500, 25) for _ in range(20)]
+    'traders': [Fundamentalist(exchange, 10**3) for _ in range(20)],
+    'events': [MarketMakerIn(0)]
 })
-
-simulator.simulate(1000)
 info = simulator.info
 
-plot_price(info)
+simulator.simulate(500)
+plot_price_fundamental(info)
