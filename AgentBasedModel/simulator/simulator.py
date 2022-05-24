@@ -21,8 +21,8 @@ class Simulator:
             # Interest payment
             trader.cash += trader.cash * self.exchange.risk_free  # allow risk-free loan
 
-    def simulate(self, n_iter: int) -> object:
-        for it in tqdm(range(n_iter), desc='Simulation'):
+    def simulate(self, n_iter: int, silent=False) -> object:
+        for it in tqdm(range(n_iter), desc='Simulation', disable=silent):
             # Capture current info
             self.info.capture()
 
