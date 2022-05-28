@@ -1,12 +1,14 @@
+import pandas as pd
 from numpy import unique
 from pandas import DataFrame
 import matplotlib.pyplot as plt
 import seaborn as sns
+import AgentBasedModel.utils.math as math
 
 
 class TransitionMatrix:
     def __init__(self, states: list = None):
-        self.labels = ['stationary', 'bullish', 'bearish', 'destructive', 'speculative']
+        self.labels = ['stationary', 'bullish', 'bearish', 'speculative', 'destructive']
         if states:
             self.matrix = self._initialize(states)
         else:
@@ -65,12 +67,16 @@ class TimeMatrix:
 
 
 def heatmap_transition(transition_matrix: TransitionMatrix, prob: bool = True, annot: bool = True, figsize=(6, 6)):
-    data = DataFrame(transition_matrix.matrix, columns=transition_matrix.labels, index=transition_matrix.labels)
+    data = transition_matrix.matrix.copy()
+    vmax = None
     if prob:
-        data = data / sum(data.sum())
+        vmax = .7
+        data = [[el / sum(row) if sum(row) > 0 else 0 for el in row] for row in data]
+
+    data = DataFrame(data, index=transition_matrix.labels, columns=transition_matrix.labels)
 
     plt.figure(figsize=figsize)
-    sns.heatmap(data, annot=annot, vmin=0, cbar=False, cmap='Blues')
+    sns.heatmap(data, annot=annot, vmin=0, vmax=vmax, cbar=False, cmap='Blues')
     plt.show()
 
 
@@ -85,3 +91,45 @@ def heatmap_time(matrix: TimeMatrix, size=None, window=0, prob: bool = True, ann
     plt.figure(figsize=figsize)
     sns.heatmap(data.T, annot=annot, vmin=0, cbar=False, cmap='Blues')
     plt.show()
+
+
+def bar_transition(transition_matrix: TransitionMatrix, prob: bool = True, figsize=(6, 6)):
+    val = [sum(row) for row in transition_matrix.matrix]
+    if prob:
+        val = [v / sum(val) for v in val]
+
+    plt.figure(figsize=(6, 6))
+    plt.title('Market States Frequency')
+    plt.bar(transition_matrix.labels, val, color='tab:blue')
+    plt.ylabel('Frequency')
+    plt.ylim(0, 1)
+    plt.show()
+
+# def probability_destruction(states: list, size=30, window=10, figsize=(6, 6)):
+#     data = (pd.DataFrame(states) == 'destructive').mean(axis=0)  # calculate probability of 'state' at each strata
+#     data.index = [i * size + window for i in data.index]  # adjust iterations
+#     # print(data)
+#
+#     plt.figure(figsize=figsize)
+#     plt.title('Destructive state probability')
+#     plt.xlabel('Iteration')
+#     plt.ylabel('Probability of Destructive state')
+#     plt.plot(data, color='black')
+#     plt.show()
+
+
+# def plot_states(states: list, size=10, window=5, rolling=None, figsize=(6, 6)):
+#     if not rolling:
+#         data = pd.DataFrame(states).mean(axis=0)  # calculate probability of 'state' at each strata
+#         data.index = [i * size + window for i in data.index]  # adjust iterations
+#     else:
+#         data = pd.DataFrame(states).mean(axis=0)
+#         idx = [i * size + window for i in data.index][rolling:]
+#         data = pd.Series(math.rolling(data, rolling), index=idx)
+#
+#     plt.figure(figsize=figsize)
+#     # plt.title('Destructive state probability')
+#     plt.xlabel('Iteration')
+#     plt.ylabel('tau')
+#     plt.plot(data, color='black')
+#     plt.show()

@@ -1,11 +1,10 @@
 from AgentBasedModel.simulator import SimulatorInfo
 import AgentBasedModel.utils.math as math
 
-import statsmodels.api as sm
 from scipy.stats import kendalltau
+import statsmodels.api as sm
 
 
-# todo надо использовать test (kendall), смотреть тау от -1 до 1 (насколько выражен тренд)
 def test_trend(values, category: bool = False, conf: float = .95) -> bool or dict:
     """
     Kendall’s Tau test.
@@ -55,22 +54,24 @@ def trend(info: SimulatorInfo, category: bool = False, size: int = None, rolling
 
 def destruction(info: SimulatorInfo, category: bool = False, size: int = None, window: int = 5):
     def cat(tau: float):
-        if tau > .4:
+        if tau > .6:
             return 'destructive'
         return 'stable'
 
     volatility = info.price_volatility(window)
     if size is None:
         res = test_trend(volatility)['tau']
+        # res_cat = test_trend(volatility, True)
         return res if not category else cat(res)
 
     res = [test_trend(volatility[i*size:(i+1)*size])['tau'] for i in range(len(volatility) // size)]
-    return res if not category else [cat(v) for v in res]
+    # res_cat = [test_trend(volatility[i * size:(i + 1) * size], True) for i in range(len(volatility) // size)]
+    return res if not category else [cat(r) for r in res]
 
 
 def efficiency(info: SimulatorInfo, category: bool = False, size: int = None, rolling: int = 1, access: int = 10):
     def cat(rel_dev):
-        if rel_dev > .015:
+        if rel_dev > .027:
             return 'inefficient'
         return 'efficient'
 
@@ -94,18 +95,18 @@ def general_states(info: SimulatorInfo, size: int = None, window: int = 5, acces
     res = list()
     for t, d, e in zip(states_trend, states_destruction, states_efficiency):
         tmp = list()
-        if d == 'stable' and e == 'efficient':
-            tmp.append('stable')
-        if t == 'bull':
-            tmp.append('bullish')
-        if t == 'bear':
-            tmp.append('bearish')
-        if t == 'stationary':  # todo надо ли
-            tmp.append('stationary')
+        # if d == 'stable' and e == 'efficient':
+        #     tmp.append('stable')
         if d == 'destructive':
             tmp.append('destructive')
-        if e == 'inefficient':
+        elif e == 'inefficient':
             tmp.append('speculative')
+        elif t == 'bull':
+            tmp.append('bullish')
+        elif t == 'bear':
+            tmp.append('bearish')
+        elif t == 'stationary':  # todo надо ли
+            tmp.append('stationary')
 
         res.append(tuple(tmp))
     return res
