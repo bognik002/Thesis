@@ -402,13 +402,14 @@ class Chartist(Trader):
         such trend, act as random trader placing only limit orders.
         """
         random_state = random.random()
+        t_cost = self.market.transaction_cost
         if self.sentiment == 'Optimistic':
             # Market order
             if random_state > .85:
                 self._buy_market(Random.draw_quantity())
             # Limit order
             elif random_state > .45:
-                self._buy_limit(Random.draw_quantity(), self.market.price() - Random.draw_delta())
+                self._buy_limit(Random.draw_quantity(), (self.market.price() - Random.draw_delta()) * (1 - t_cost))
             # Cancel order
             elif random_state < .35:
                 if self.orders:
@@ -419,13 +420,13 @@ class Chartist(Trader):
                 self._sell_market(Random.draw_quantity())
             # Limit order
             elif random_state > .45:
-                self._sell_limit(Random.draw_quantity(), self.market.price() + Random.draw_delta())
+                self._sell_limit(Random.draw_quantity(), (self.market.price() + Random.draw_delta()) * (1 + t_cost))
             # Cancel order
             elif random_state < .35:
                 if self.orders:
                     self._cancel_order(self.orders[-1])
 
-    def change_sentiment(self, info, a1=1., a2=1., v1=1.):
+    def change_sentiment(self, info, a1=1, a2=1, v1=1):
         """
         Change sentiment
 
@@ -569,13 +570,6 @@ class MarketMaker(Trader):
         else:
             self.panic = False
 
-        # todo надо решить мы будем продавать в панике рыночными заявками или нет
-        # if self.panic:
-        #     self._buy_market(bid_volume // 2) if bid_volume else None
-        #     self._sell_market(ask_volume // 2) if ask_volume else None
-        #
-        # else:
-        # todo понять надо отступ делать от спреда или от среднего
         base_offset = min((spread['ask'] - spread['bid']) * (self.assets / self.ul), 1)  # Price offset
         self._buy_limit(bid_volume, price - base_offset)  # BID
         self._sell_limit(ask_volume, price + base_offset)  # ASK
