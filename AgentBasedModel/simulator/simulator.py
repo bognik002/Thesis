@@ -23,13 +23,20 @@ class Simulator:
 
     def simulate(self, n_iter: int, silent=False) -> object:
         for it in tqdm(range(n_iter), desc='Simulation', disable=silent):
-            # Capture current info
-            self.info.capture()
-
             # Call scenario
             if self.events:
                 for event in self.events:
                     event.call(it)
+
+            # Capture current info
+            self.info.capture()
+
+            # Change behaviour
+            for trader in self.traders:
+                if type(trader) == Universalist:
+                    trader.change_strategy(self.info)
+                elif type(trader) == Chartist:
+                    trader.change_sentiment(self.info)
 
             # Call Traders
             random.shuffle(self.traders)
@@ -39,13 +46,6 @@ class Simulator:
             # Payments and dividends
             self._payments()  # pay dividends
             self.exchange.generate_dividend()  # generate next dividends
-
-            # Change behaviour
-            for trader in self.traders:
-                if type(trader) == Universalist:
-                    trader.change_strategy(self.info)
-                elif type(trader) == Chartist:
-                    trader.change_sentiment(self.info)
 
         return self
 

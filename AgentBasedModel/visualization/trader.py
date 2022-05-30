@@ -51,13 +51,13 @@ def plot_assets(info: SimulatorInfo, rolling: int = 1, figsize=(6, 6)):
     plt.show()
 
 
-def plot_types(info: SimulatorInfo, rolling: int = 1, figsize=(6, 6)):
+def plot_strategies(info: SimulatorInfo, rolling: int = 1, figsize=(6, 6)):
     plt.figure(figsize=figsize)
     plt.title('Strategy') if rolling == 1 else plt.title(f'Strategy (MA {rolling})')
     plt.xlabel('Iterations')
     plt.ylabel('Number of traders')
 
-    for tr_type in ['Random', 'Fundamentalist', 'Chartist']:
+    for tr_type in ['Fundamentalist', 'Chartist']:
         v = [sum([t == tr_type for t in v.values()]) for v in info.types]
         plt.plot(range(rolling, len(v)), math.rolling(v, rolling), label=tr_type)
 
@@ -65,7 +65,7 @@ def plot_types(info: SimulatorInfo, rolling: int = 1, figsize=(6, 6)):
     plt.show()
 
 
-def plot_types2(info: SimulatorInfo, rolling: int = 1, figsize=(6, 6)):
+def plot_strategies2(info: SimulatorInfo, rolling: int = 1, figsize=(6, 6)):
     plt.figure(figsize=figsize)
     plt.title('Strategy') if rolling == 1 else plt.title(f'Strategy (MA {rolling})')
     plt.xlabel('Iterations')
@@ -94,7 +94,7 @@ def plot_sentiments2(info: SimulatorInfo, rolling: int = 1, figsize=(6, 6)):
     plt.figure(figsize=figsize)
     plt.title('Sentiment') if rolling == 1 else plt.title(f'Sentiment (MA {rolling})')
     plt.xlabel('Iterations')
-    plt.ylabel('Share of Pessimistic among Chartists')
+    plt.ylabel('Share of Pessimists among Chartists')
 
     v = [sum([t == 'Pessimistic' for t in v.values()]) / len(v) for v in info.sentiments]
     plt.plot(range(rolling, len(v)), math.rolling(v, rolling), color='black')
@@ -108,7 +108,7 @@ def plot_returns(info: SimulatorInfo, rolling: int = 1, figsize=(6, 6)):
     plt.xlabel('Iterations')
     plt.ylabel('Mean Returns')
 
-    labels = ['Random', 'Fundamentalist', 'Chartist']
+    labels = ['Fundamentalist', 'Chartist']
     data = math.aggregate(info.types, info.returns, labels)
     for k, v in data.items():
         try:

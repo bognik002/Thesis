@@ -284,7 +284,7 @@ class Random(Trader):
                 self._sell_market(quantity)
 
         # Limit order
-        elif random_state > .5:
+        elif random_state > .45:
             price = self.draw_price(order_type, spread)
             quantity = self.draw_quantity()
             if order_type == 'bid':
@@ -407,7 +407,7 @@ class Chartist(Trader):
             if random_state > .85:
                 self._buy_market(Random.draw_quantity())
             # Limit order
-            elif random_state > .5:
+            elif random_state > .45:
                 self._buy_limit(Random.draw_quantity(), self.market.price() - Random.draw_delta())
             # Cancel order
             elif random_state < .35:
@@ -418,7 +418,7 @@ class Chartist(Trader):
             if random_state > .85:
                 self._sell_market(Random.draw_quantity())
             # Limit order
-            elif random_state > .5:
+            elif random_state > .45:
                 self._sell_limit(Random.draw_quantity(), self.market.price() + Random.draw_delta())
             # Cancel order
             elif random_state < .35:
@@ -483,7 +483,7 @@ class Universalist(Fundamentalist, Chartist):
         elif self.type == 'Fundamentalist':
             Fundamentalist.call(self)
 
-    def change_strategy(self, info, a1=.05, a2=.05, a3=.05, v1=1, v2=1, s=1):
+    def change_strategy(self, info, a1=1, a2=1, a3=1, v1=.1, v2=.1, s=.1):
         """
         Change strategy or sentiment
 

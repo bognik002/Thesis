@@ -52,7 +52,7 @@ class InformationShock(Event):
 
 
 class MarketMakerIn(Event):
-    def __init__(self, it, cash: float = 5e4):
+    def __init__(self, it, cash: float = 1e4):
         super().__init__(it)
         self.cash = cash
 

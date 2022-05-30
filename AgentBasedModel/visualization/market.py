@@ -40,14 +40,14 @@ def plot_price_fundamental(info: SimulatorInfo, spread=False, access: int = 1, r
 def plot_arbitrage(info: SimulatorInfo, access: int = 1, rolling: int = 1, figsize=(6, 6)):
     plt.figure(figsize=figsize)
     if rolling == 1:
-        plt.title('Stock Fundamental and Market value difference')
+        plt.title('Stock Fundamental and Market value difference %')
     else:
-        plt.title(f'Stock Fundamental and Market value difference (MA {rolling})')
+        plt.title(f'Stock Fundamental and Market value difference % (MA {rolling})')
     plt.xlabel('Iterations')
     plt.ylabel('Present value')
     market = info.prices
     fundamental = info.fundamental_value(access)
-    arbitrage = [fundamental[i] - market[i] for i in range(len(market))]
+    arbitrage = [(fundamental[i] - market[i]) / fundamental[i] for i in range(len(market))]
     plt.plot(range(rolling, len(arbitrage)), math.rolling(arbitrage, rolling), color='black')
     plt.show()
 
