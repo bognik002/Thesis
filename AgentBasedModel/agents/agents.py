@@ -284,7 +284,7 @@ class Random(Trader):
                 self._sell_market(quantity)
 
         # Limit order
-        elif random_state > .45:
+        elif random_state > .5:
             price = self.draw_price(order_type, spread)
             quantity = self.draw_quantity()
             if order_type == 'bid':
@@ -408,7 +408,7 @@ class Chartist(Trader):
             if random_state > .85:
                 self._buy_market(Random.draw_quantity())
             # Limit order
-            elif random_state > .45:
+            elif random_state > .5:
                 self._buy_limit(Random.draw_quantity(), (self.market.price() - Random.draw_delta()) * (1 - t_cost))
             # Cancel order
             elif random_state < .35:
@@ -419,7 +419,7 @@ class Chartist(Trader):
             if random_state > .85:
                 self._sell_market(Random.draw_quantity())
             # Limit order
-            elif random_state > .45:
+            elif random_state > .5:
                 self._sell_limit(Random.draw_quantity(), (self.market.price() + Random.draw_delta()) * (1 + t_cost))
             # Cancel order
             elif random_state < .35:
