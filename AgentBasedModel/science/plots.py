@@ -42,6 +42,27 @@ class TransitionMatrix:
             for j in range(len(self.labels)):
                 self.matrix[i][j] += matrix[i][j]
 
+    def distance(self, other, value: bool = True, prob: bool = True):
+        dist_m = list()
+        m1 = self.get_matrix(prob)
+        m2 = other.get_matrix(prob)
+        for i in range(len(self.matrix)):
+            row = list()
+            for j in range(len(self.matrix[0])):
+                row.append(m1[i][j] - m2[i][j])
+            dist_m.append(row)
+
+        if value:
+            return sum([sum([abs(el) for el in row]) for row in dist_m])
+        return dist_m
+
+    def get_matrix(self, prob: bool = False):
+        if prob:
+            data = [[el / sum(row) if sum(row) > 0 else 0 for el in row] for row in self.matrix]
+            return data
+        else:
+            return self.matrix
+
 
 class TimeMatrix:
     def __init__(self, states: list = None, labels: list = None):
@@ -67,13 +88,25 @@ class TimeMatrix:
 
 
 def heatmap_transition(transition_matrix: TransitionMatrix, prob: bool = True, annot: bool = True, figsize=(6, 6)):
-    data = transition_matrix.matrix.copy()
     vmax = None
     if prob:
         vmax = .7
-        data = [[el / sum(row) if sum(row) > 0 else 0 for el in row] for row in data]
 
+    data = transition_matrix.get_matrix(prob)
     data = DataFrame(data, index=transition_matrix.labels, columns=transition_matrix.labels)
+
+    plt.figure(figsize=figsize)
+    sns.heatmap(data, annot=annot, vmin=0, vmax=vmax, cbar=False, cmap='Blues')
+    plt.show()
+
+
+def heatmap_distance(first: TransitionMatrix, second: TransitionMatrix, prob: bool = True, annot: bool = True,
+                     figsize=(6, 6)):
+    vmax = None
+    if prob:
+        vmax = .3
+    data = first.distance(second, value=False, prob=prob).copy()
+    data = DataFrame(data, index=first.labels, columns=first.labels)
 
     plt.figure(figsize=figsize)
     sns.heatmap(data, annot=annot, vmin=0, vmax=vmax, cbar=False, cmap='Blues')
@@ -104,32 +137,3 @@ def bar_transition(transition_matrix: TransitionMatrix, prob: bool = True, figsi
     plt.ylabel('Frequency')
     plt.ylim(0, 1)
     plt.show()
-
-# def probability_destruction(states: list, size=30, window=10, figsize=(6, 6)):
-#     data = (pd.DataFrame(states) == 'destructive').mean(axis=0)  # calculate probability of 'state' at each strata
-#     data.index = [i * size + window for i in data.index]  # adjust iterations
-#     # print(data)
-#
-#     plt.figure(figsize=figsize)
-#     plt.title('Destructive state probability')
-#     plt.xlabel('Iteration')
-#     plt.ylabel('Probability of Destructive state')
-#     plt.plot(data, color='black')
-#     plt.show()
-
-
-# def plot_states(states: list, size=10, window=5, rolling=None, figsize=(6, 6)):
-#     if not rolling:
-#         data = pd.DataFrame(states).mean(axis=0)  # calculate probability of 'state' at each strata
-#         data.index = [i * size + window for i in data.index]  # adjust iterations
-#     else:
-#         data = pd.DataFrame(states).mean(axis=0)
-#         idx = [i * size + window for i in data.index][rolling:]
-#         data = pd.Series(math.rolling(data, rolling), index=idx)
-#
-#     plt.figure(figsize=figsize)
-#     # plt.title('Destructive state probability')
-#     plt.xlabel('Iteration')
-#     plt.ylabel('tau')
-#     plt.plot(data, color='black')
-#     plt.show()
