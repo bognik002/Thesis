@@ -1,5 +1,6 @@
 from AgentBasedModel.simulator import Simulator
-from AgentBasedModel.agents import Universalist, Fundamentalist, MarketMaker
+from AgentBasedModel.agents import Trader, Universalist, Fundamentalist, MarketMaker
+from AgentBasedModel.utils.orders import Order
 
 
 class Event:
@@ -18,13 +19,13 @@ class Event:
         return self
 
 
-class PriceShock(Event):
+class FundamentalPriceShock(Event):
     def __init__(self, it: int, price_change: float):
         super().__init__(it)
         self.dp = price_change
 
     def __repr__(self):
-        return f'Price shock (it={self.it}, dp={self.dp})'
+        return f'Fundamental Price shock (it={self.it}, dp={self.dp})'
 
     def call(self, it: int):
         if super().call(it):
@@ -33,6 +34,26 @@ class PriceShock(Event):
         r = self.simulator.exchange.risk_free  # risk-free rate
 
         self.simulator.exchange.dividend_book = [div + self.dp * r for div in divs]
+
+
+class MarketPriceShock(Event):
+    def __init__(self, it: int, volume_change: float):
+        super().__init__(it)
+        self.volume = round(volume_change)
+
+    def __repr__(self):
+        return f'Market Price shock (it={self.it}, dp={self.volume})'
+
+    def call(self, it: int):
+        if super().call(it):
+            return
+        exchange = self.simulator.exchange
+        pseudo_trader = Trader(exchange, 1e6, int(1e4))
+        if self.volume < 0:  # buy
+            order = Order(exchange.order_book['ask'].last.price, abs(self.volume), 'bid', pseudo_trader)
+        else:  # sell
+            order = Order(exchange.order_book['bid'].last.price, abs(self.volume), 'ask', pseudo_trader)
+        exchange.market_order(order)
 
 
 class InformationShock(Event):
