@@ -49,7 +49,7 @@ class TransitionMatrix:
         for i in range(len(self.matrix)):
             row = list()
             for j in range(len(self.matrix[0])):
-                row.append(m1[i][j] - m2[i][j])
+                row.append(m2[i][j] - m1[i][j])
             dist_m.append(row)
 
         if value:
@@ -104,12 +104,12 @@ def heatmap_distance(first: TransitionMatrix, second: TransitionMatrix, prob: bo
                      figsize=(6, 6)):
     vmax = None
     if prob:
-        vmax = .3
+        vmax = .4
     data = first.distance(second, value=False, prob=prob).copy()
     data = DataFrame(data, index=first.labels, columns=first.labels)
 
     plt.figure(figsize=figsize)
-    sns.heatmap(data, annot=annot, vmin=0, vmax=vmax, cbar=False, cmap='Blues')
+    sns.heatmap(data, annot=annot, vmin=-vmax, vmax=vmax, cmap='vlag', cbar=False)
     plt.show()
 
 
